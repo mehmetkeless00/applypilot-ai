@@ -9,26 +9,100 @@ import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/utils";
 
 type ResumeMode = "paste" | "upload";
+type JobMode = "paste" | "import";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+function ModeTabs<T extends string>({
+  modes,
+  labels,
+  active,
+  onChange,
+  disabled,
+}: {
+  modes: readonly T[];
+  labels: Record<T, string>;
+  active: T;
+  onChange: (mode: T) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
+      {modes.map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          disabled={disabled}
+          className={cn(
+            "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
+            active === mode
+              ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+              : "text-slate-500 hover:text-slate-700 dark:text-slate-400",
+          )}
+        >
+          {labels[mode]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function NewAnalysisForm() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [jobMode, setJobMode] = useState<JobMode>("paste");
+  const [jobTitle, setJobTitle] = useState("");
+  const [company, setCompany] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importedFrom, setImportedFrom] = useState<string | null>(null);
+
   const [resumeMode, setResumeMode] = useState<ResumeMode>("paste");
   const [fileName, setFileName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function handleImport() {
+    setImportError(null);
+    setImporting(true);
+    try {
+      const response = await fetch("/api/import-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: importUrl }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Import failed. Try pasting manually.");
+      }
+      setJobTitle(payload.jobTitle ?? "");
+      setCompany(payload.company ?? "");
+      setJobDescription(
+        payload.location
+          ? `Location: ${payload.location}\n\n${payload.jobDescription}`
+          : payload.jobDescription,
+      );
+      setImportedFrom(importUrl);
+      setJobMode("paste"); // show the imported text so the user can review/edit
+    } catch (err) {
+      setImportError(
+        err instanceof Error ? err.message : "Import failed. Try pasting manually.",
+      );
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const jobTitle = String(formData.get("jobTitle") ?? "");
-    const company = String(formData.get("company") ?? "");
-    const jobDescription = String(formData.get("jobDescription") ?? "");
+    const formData = new FormData(event.currentTarget);
     const resumeText = String(formData.get("resumeText") ?? "");
     const file = fileInputRef.current?.files?.[0];
 
@@ -103,6 +177,8 @@ export function NewAnalysisForm() {
           maxLength={200}
           placeholder="Senior Frontend Engineer"
           disabled={submitting}
+          value={jobTitle}
+          onChange={(e) => setJobTitle(e.target.value)}
         />
         <Input
           label="Company (optional)"
@@ -110,43 +186,89 @@ export function NewAnalysisForm() {
           maxLength={200}
           placeholder="Acme Inc."
           disabled={submitting}
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
         />
       </div>
 
-      <Textarea
-        label="Job description"
-        name="jobDescription"
-        required
-        minLength={100}
-        maxLength={50000}
-        rows={10}
-        placeholder="Paste the full job description here…"
-        disabled={submitting}
-      />
+      <div>
+        <div className="mb-1.5 flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Job description
+          </span>
+          <ModeTabs
+            modes={["paste", "import"] as const}
+            labels={{ paste: "Paste job description", import: "Import from URL" }}
+            active={jobMode}
+            onChange={setJobMode}
+            disabled={submitting || importing}
+          />
+        </div>
+
+        {jobMode === "import" ? (
+          <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+            <Input
+              label="Job posting URL"
+              type="url"
+              placeholder="https://boards.greenhouse.io/company/jobs/123456"
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+              disabled={importing}
+            />
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              Supported: Greenhouse, Lever, Ashby, Workable. For LinkedIn, copy
+              the posting text and use the Paste tab.
+            </p>
+            {importError && (
+              <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                {importError}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              className="mt-3"
+              onClick={handleImport}
+              disabled={importing || !importUrl.trim()}
+            >
+              {importing && <Spinner />}
+              {importing ? "Importing…" : "Import job posting"}
+            </Button>
+          </div>
+        ) : (
+          <>
+            {importedFrom && (
+              <p className="mb-1.5 text-xs text-green-700 dark:text-green-400">
+                Imported from {importedFrom} — review and edit below.
+              </p>
+            )}
+            <Textarea
+              name="jobDescription"
+              required
+              minLength={100}
+              maxLength={50000}
+              rows={10}
+              placeholder="Paste the full job description here…"
+              disabled={submitting}
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+            />
+          </>
+        )}
+      </div>
 
       <div>
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Your resume
           </span>
-          <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800">
-            {(["paste", "upload"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setResumeMode(mode)}
-                disabled={submitting}
-                className={cn(
-                  "rounded-md px-3 py-1 text-xs font-semibold transition-colors",
-                  resumeMode === mode
-                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400",
-                )}
-              >
-                {mode === "paste" ? "Paste text" : "Upload PDF"}
-              </button>
-            ))}
-          </div>
+          <ModeTabs
+            modes={["paste", "upload"] as const}
+            labels={{ paste: "Paste text", upload: "Upload PDF" }}
+            active={resumeMode}
+            onChange={setResumeMode}
+            disabled={submitting}
+          />
         </div>
 
         {resumeMode === "paste" ? (
@@ -197,8 +319,7 @@ export function NewAnalysisForm() {
         </Button>
         {submitting && (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Deep analysis in progress — this can take a few minutes. Keep this
-            tab open.
+            Analysis in progress — this usually takes under a minute.
           </p>
         )}
       </div>
