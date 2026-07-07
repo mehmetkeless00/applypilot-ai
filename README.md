@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ApplyPilot AI
 
-## Getting Started
+AI-powered job application tailoring. Paste a job description and your resume; get a calibrated fit score (0–100), a skills-gap analysis, your strengths with evidence, a tailored professional summary, and a ready-to-send cover letter. Every analysis is saved to your dashboard.
 
-First, run the development server:
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · Supabase (auth, Postgres + RLS, storage) · Gemini 2.5 Flash (`@google/genai`) · Vercel
+
+## Setup
+
+### 1. Supabase
+
+1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
+2. Open the SQL editor and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). This creates the `profiles` and `analyses` tables, RLS policies, the signup trigger, and the private `resumes` storage bucket.
+3. Copy the project URL and anon key from **Settings → API**.
+
+### 2. Environment
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Fill in:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Notes |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | From Supabase project settings |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase project settings |
+| `GEMINI_API_KEY` | Server-only. Create one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Run
 
-## Learn More
+```bash
+npm install
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has deprecated it.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How the AI analysis works
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`src/lib/ai/analyze.ts` makes a single `gemini-2.5-flash` call with schema-constrained JSON output (`responseJsonSchema` derived from the same Zod schema via `z.toJSONSchema`), returning all analysis fields in one response that is then Zod-validated. Two provider specifics are handled:
 
-## Deploy on Vercel
+- **Safety blocks** — a blocked prompt (`promptFeedback.blockReason`) or blocked output (`finishReason` of `SAFETY`/`PROHIBITED_CONTENT`/`BLOCKLIST`) maps to a friendly 422 instead of crashing; the `analyses.model` column records the exact model version that answered.
+- **Timeouts** — the API route keeps `maxDuration = 300` for headroom, though Flash typically answers in seconds.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Dev server (Turbopack) |
+| `npm run build` | Production build |
+| `npm test` | Vitest suite (schemas, AI engine with mocked SDK, API route with mocked Supabase) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+
+## Deployment (Vercel)
+
+1. Push the repo to GitHub and import it in Vercel.
+2. Set the three environment variables from `.env.local` in the Vercel project settings.
+3. Deploy. Add your production URL to Supabase **Auth → URL Configuration** (site URL + `https://<domain>/auth/callback` redirect).
+
+## Manual verification checklist
+
+1. Sign up → confirm a `profiles` row was created.
+2. Create an analysis with pasted resume text → score, skills, strengths, summary, and cover letter render; row saved with your `user_id`.
+3. Repeat with a PDF resume upload.
+4. Sign in as a second user → their dashboard is empty (RLS).

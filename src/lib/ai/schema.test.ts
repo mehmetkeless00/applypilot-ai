@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+import { AnalysisResult, AnalyzeRequest, clampScore } from "./schema";
+
+const validRequest = {
+  jobTitle: "Senior Frontend Engineer",
+  company: "Acme",
+  jobDescription: "x".repeat(200),
+  resumeText: "y".repeat(200),
+};
+
+describe("AnalyzeRequest", () => {
+  it("accepts a valid pasted-resume request", () => {
+    expect(AnalyzeRequest.safeParse(validRequest).success).toBe(true);
+  });
+
+  it("accepts a file-based request without resume text", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      resumeText: undefined,
+      resumeFilePath: "user-123/resume.pdf",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects when neither resume text nor file is provided", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      resumeText: undefined,
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects a too-short job description", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      jobDescription: "too short",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects oversized inputs", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      jobDescription: "x".repeat(50_001),
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("company is optional", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      company: undefined,
+    });
+    expect(parsed.success).toBe(true);
+  });
+});
+
+describe("AnalysisResult", () => {
+  const validResult = {
+    fit_score: 72,
+    fit_summary: "Solid foundation with some gaps.",
+    missing_skills: [
+      { skill: "Kubernetes", importance: "critical", suggestion: "Take a course." },
+    ],
+    strengths: [{ strength: "React", evidence: "5 years building React apps." }],
+    tailored_summary: "Frontend engineer with...",
+    cover_letter: "Dear Hiring Manager, ...",
+  };
+
+  it("parses a well-formed result", () => {
+    expect(AnalysisResult.safeParse(validResult).success).toBe(true);
+  });
+
+  it("rejects an unknown importance level", () => {
+    const parsed = AnalysisResult.safeParse({
+      ...validResult,
+      missing_skills: [
+        { skill: "K8s", importance: "essential", suggestion: "..." },
+      ],
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("rejects missing fields", () => {
+    const parsed = AnalysisResult.safeParse({
+      ...validResult,
+      cover_letter: undefined,
+    });
+    expect(parsed.success).toBe(false);
+  });
+});
+
+describe("clampScore", () => {
+  it("clamps out-of-range scores into 0–100", () => {
+    expect(clampScore(-5)).toBe(0);
+    expect(clampScore(105)).toBe(100);
+  });
+
+  it("rounds fractional scores", () => {
+    expect(clampScore(71.6)).toBe(72);
+  });
+
+  it("passes through valid scores", () => {
+    expect(clampScore(88)).toBe(88);
+  });
+});
