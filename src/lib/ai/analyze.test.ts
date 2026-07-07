@@ -37,6 +37,14 @@ const validPayload = {
   strengths: [{ strength: "Go", evidence: "6 years of Go experience." }],
   tailored_summary: "Experienced backend engineer.",
   cover_letter: "Dear team, ...",
+  ats_keywords: [
+    {
+      keyword: "Go",
+      status: "matched",
+      importance: "required",
+      suggestion: "Keep Go prominent in your skills list.",
+    },
+  ],
 };
 
 function mockResponse(overrides: Record<string, unknown> = {}) {

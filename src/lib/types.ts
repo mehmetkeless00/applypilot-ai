@@ -11,6 +11,16 @@ export interface Strength {
   evidence: string;
 }
 
+export type AtsStatus = "matched" | "weak" | "missing";
+export type AtsImportance = "required" | "preferred" | "nice_to_have";
+
+export interface AtsKeyword {
+  keyword: string;
+  status: AtsStatus;
+  importance: AtsImportance;
+  suggestion: string;
+}
+
 export interface Analysis {
   id: string;
   user_id: string;
@@ -25,6 +35,8 @@ export interface Analysis {
   strengths: Strength[];
   tailored_summary: string;
   cover_letter: string;
+  /** Empty for analyses created before ATS coverage shipped. */
+  ats_keywords: AtsKeyword[];
   model: string;
   created_at: string;
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { ScoreGauge } from "@/components/analysis/ScoreGauge";
+import { AtsCoverage } from "@/components/analysis/AtsCoverage";
 import { MissingSkills } from "@/components/analysis/MissingSkills";
 import { Strengths } from "@/components/analysis/Strengths";
 import { CopyableText } from "@/components/analysis/CopyableText";
@@ -64,6 +65,8 @@ export default async function AnalysisPage({
         <Strengths strengths={analysis.strengths} />
         <MissingSkills skills={analysis.missing_skills} />
       </div>
+
+      <AtsCoverage keywords={analysis.ats_keywords ?? []} />
 
       <Card>
         <CardTitle>Tailored professional summary</CardTitle>

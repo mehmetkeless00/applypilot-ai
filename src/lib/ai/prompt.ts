@@ -16,6 +16,8 @@ For tailored_summary: write a 3-4 sentence professional summary the candidate ca
 
 For cover_letter: write a complete, ready-to-send cover letter (250-350 words) in Markdown. Structure: opening tied to the specific role and company, one or two body paragraphs connecting the candidate's real experience to the role's needs, a confident close. Professional but human tone; no fabricated experience, no generic filler like "esteemed organization". If the company name is unknown, write it so no placeholder is needed.
 
+For ats_keywords: extract the concrete keywords an applicant tracking system would screen for in this job description — hard skills, tools, certifications, methodologies, domain terms (not soft-skill filler). For each keyword set status: matched (resume clearly demonstrates it, ideally verbatim), weak (mentioned but thin, implied, or phrased so an ATS may miss it), or missing (absent from the resume). Set importance: required (explicit must-have), preferred (explicitly preferred/repeated), or nice_to_have. Each suggestion is one actionable sentence — for matched keywords, how to reinforce placement; for weak/missing, how to phrase or honestly add it. List 10-25 keywords, most important first.
+
 Ground every claim in the resume. If the resume is thin, reflect that honestly in the score and analysis.`;
 
 interface PromptInput {

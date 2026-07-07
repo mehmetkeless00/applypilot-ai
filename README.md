@@ -9,7 +9,7 @@ AI-powered job application tailoring. Paste a job description and your resume; g
 ### 1. Supabase
 
 1. Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-2. Open the SQL editor and run [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql). This creates the `profiles` and `analyses` tables, RLS policies, the signup trigger, and the private `resumes` storage bucket.
+2. Open the SQL editor and run every file in [`supabase/migrations/`](supabase/migrations/) **in numeric order** (`0001_init.sql` creates tables/RLS/trigger/storage; later migrations add Phase 2 columns and are safe to run on a live database — they're additive only).
 3. Copy the project URL and anon key from **Settings → API**.
 
 ### 2. Environment

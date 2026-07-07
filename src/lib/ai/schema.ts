@@ -21,6 +21,14 @@ export const AnalysisResult = z.object({
   ),
   tailored_summary: z.string(),
   cover_letter: z.string(),
+  ats_keywords: z.array(
+    z.object({
+      keyword: z.string(),
+      status: z.enum(["matched", "weak", "missing"]),
+      importance: z.enum(["required", "preferred", "nice_to_have"]),
+      suggestion: z.string(),
+    }),
+  ),
 });
 
 export type AnalysisResultData = z.infer<typeof AnalysisResult>;

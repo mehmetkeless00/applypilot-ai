@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         strengths: result.strengths,
         tailored_summary: result.tailored_summary,
         cover_letter: result.cover_letter,
+        ats_keywords: result.ats_keywords,
         model: servedBy,
       })
       .select("id")

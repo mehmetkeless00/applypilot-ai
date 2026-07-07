@@ -65,10 +65,28 @@ describe("AnalysisResult", () => {
     strengths: [{ strength: "React", evidence: "5 years building React apps." }],
     tailored_summary: "Frontend engineer with...",
     cover_letter: "Dear Hiring Manager, ...",
+    ats_keywords: [
+      {
+        keyword: "React",
+        status: "matched",
+        importance: "required",
+        suggestion: "Keep React in your skills section header.",
+      },
+    ],
   };
 
   it("parses a well-formed result", () => {
     expect(AnalysisResult.safeParse(validResult).success).toBe(true);
+  });
+
+  it("rejects unknown ATS status or importance values", () => {
+    const bad = {
+      ...validResult,
+      ats_keywords: [
+        { keyword: "React", status: "partial", importance: "required", suggestion: "x" },
+      ],
+    };
+    expect(AnalysisResult.safeParse(bad).success).toBe(false);
   });
 
   it("rejects an unknown importance level", () => {
