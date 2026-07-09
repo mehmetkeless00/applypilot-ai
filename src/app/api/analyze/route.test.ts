@@ -67,6 +67,8 @@ const analysisResult = {
     strengths: [],
     tailored_summary: "Summary.",
     cover_letter: "Letter.",
+    ats_keywords: [],
+    resume_suggestions: [],
   },
   servedBy: "gemini-2.5-flash",
 };

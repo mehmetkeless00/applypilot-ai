@@ -21,6 +21,16 @@ export interface AtsKeyword {
   suggestion: string;
 }
 
+export type SuggestionImpact = "low" | "medium" | "high";
+
+export interface ResumeSuggestion {
+  section: string;
+  original_text: string;
+  improved_text: string;
+  reason: string;
+  impact: SuggestionImpact;
+}
+
 export interface Analysis {
   id: string;
   user_id: string;
@@ -37,6 +47,8 @@ export interface Analysis {
   cover_letter: string;
   /** Empty for analyses created before ATS coverage shipped. */
   ats_keywords: AtsKeyword[];
+  /** Empty for analyses created before rewrite suggestions shipped. */
+  resume_suggestions: ResumeSuggestion[];
   model: string;
   created_at: string;
 }

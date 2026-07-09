@@ -45,6 +45,15 @@ const validPayload = {
       suggestion: "Keep Go prominent in your skills list.",
     },
   ],
+  resume_suggestions: [
+    {
+      section: "Summary",
+      original_text: "I have 6 years of Go experience.",
+      improved_text: "Backend engineer with 6 years of production Go experience.",
+      reason: "Mirrors the job's core requirement in the first line.",
+      impact: "high",
+    },
+  ],
 };
 
 function mockResponse(overrides: Record<string, unknown> = {}) {

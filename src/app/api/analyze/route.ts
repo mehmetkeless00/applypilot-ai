@@ -91,6 +91,7 @@ export async function POST(request: Request) {
         tailored_summary: result.tailored_summary,
         cover_letter: result.cover_letter,
         ats_keywords: result.ats_keywords,
+        resume_suggestions: result.resume_suggestions,
         model: servedBy,
       })
       .select("id")

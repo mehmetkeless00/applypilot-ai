@@ -29,6 +29,15 @@ export const AnalysisResult = z.object({
       suggestion: z.string(),
     }),
   ),
+  resume_suggestions: z.array(
+    z.object({
+      section: z.string(),
+      original_text: z.string(),
+      improved_text: z.string(),
+      reason: z.string(),
+      impact: z.enum(["low", "medium", "high"]),
+    }),
+  ),
 });
 
 export type AnalysisResultData = z.infer<typeof AnalysisResult>;

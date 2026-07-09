@@ -73,6 +73,15 @@ describe("AnalysisResult", () => {
         suggestion: "Keep React in your skills section header.",
       },
     ],
+    resume_suggestions: [
+      {
+        section: "Summary",
+        original_text: "Frontend developer with experience.",
+        improved_text: "Senior frontend engineer with 5 years of React experience.",
+        reason: "Leads with the seniority and stack the role requires.",
+        impact: "high",
+      },
+    ],
   };
 
   it("parses a well-formed result", () => {
@@ -84,6 +93,22 @@ describe("AnalysisResult", () => {
       ...validResult,
       ats_keywords: [
         { keyword: "React", status: "partial", importance: "required", suggestion: "x" },
+      ],
+    };
+    expect(AnalysisResult.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejects an unknown resume-suggestion impact level", () => {
+    const bad = {
+      ...validResult,
+      resume_suggestions: [
+        {
+          section: "Summary",
+          original_text: "a",
+          improved_text: "b",
+          reason: "c",
+          impact: "critical",
+        },
       ],
     };
     expect(AnalysisResult.safeParse(bad).success).toBe(false);

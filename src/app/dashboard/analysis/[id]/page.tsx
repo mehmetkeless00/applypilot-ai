@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { ScoreGauge } from "@/components/analysis/ScoreGauge";
 import { AtsCoverage } from "@/components/analysis/AtsCoverage";
+import { ResumeSuggestions } from "@/components/analysis/ResumeSuggestions";
 import { MissingSkills } from "@/components/analysis/MissingSkills";
 import { Strengths } from "@/components/analysis/Strengths";
 import { CopyableText } from "@/components/analysis/CopyableText";
@@ -67,6 +68,8 @@ export default async function AnalysisPage({
       </div>
 
       <AtsCoverage keywords={analysis.ats_keywords ?? []} />
+
+      <ResumeSuggestions suggestions={analysis.resume_suggestions ?? []} />
 
       <Card>
         <CardTitle>Tailored professional summary</CardTitle>
