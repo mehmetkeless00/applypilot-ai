@@ -9,6 +9,7 @@ import { MissingSkills } from "@/components/analysis/MissingSkills";
 import { Strengths } from "@/components/analysis/Strengths";
 import { CopyableText } from "@/components/analysis/CopyableText";
 import { DeleteAnalysisButton } from "@/components/analysis/DeleteAnalysisButton";
+import { ExportButtons } from "@/components/analysis/ExportButtons";
 import { formatDate } from "@/lib/utils";
 import type { Analysis } from "@/lib/types";
 
@@ -49,7 +50,10 @@ export default async function AnalysisPage({
             {formatDate(analysis.created_at)}
           </p>
         </div>
-        <DeleteAnalysisButton id={analysis.id} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ExportButtons analysisId={analysis.id} doc="full" formats={["pdf"]} />
+          <DeleteAnalysisButton id={analysis.id} />
+        </div>
       </div>
 
       <Card className="flex flex-col items-center gap-6 sm:flex-row">
@@ -80,6 +84,7 @@ export default async function AnalysisPage({
           text={analysis.tailored_summary}
           filename={`summary-${slug}.txt`}
         />
+        <ExportButtons analysisId={analysis.id} doc="summary" className="mt-2" />
       </Card>
 
       <Card>
@@ -90,6 +95,11 @@ export default async function AnalysisPage({
         <CopyableText
           text={analysis.cover_letter}
           filename={`cover-letter-${slug}.md`}
+        />
+        <ExportButtons
+          analysisId={analysis.id}
+          doc="cover_letter"
+          className="mt-2"
         />
       </Card>
     </div>
