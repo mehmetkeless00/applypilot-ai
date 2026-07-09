@@ -1,28 +1,40 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMock, countChain, insertSingleMock, analyzeMock } = vi.hoisted(
-  () => ({
+const { getUserMock, countChain, profileChain, insertSingleMock, analyzeMock } =
+  vi.hoisted(() => ({
     getUserMock: vi.fn(),
     countChain: { count: 0 },
+    profileChain: { plan: "free" },
     insertSingleMock: vi.fn(),
     analyzeMock: vi.fn(),
-  }),
-);
+  }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: getUserMock },
-    from: () => ({
-      select: (cols: string, opts?: { count?: string }) => {
-        if (opts?.count) {
-          return { gte: async () => ({ count: countChain.count }) };
-        }
-        return {};
-      },
-      insert: () => ({
-        select: () => ({ single: insertSingleMock }),
-      }),
-    }),
+    from: (table: string) =>
+      table === "profiles"
+        ? {
+            select: () => ({
+              eq: () => ({
+                single: async () => ({
+                  data: { plan: profileChain.plan },
+                  error: null,
+                }),
+              }),
+            }),
+          }
+        : {
+            select: (cols: string, opts?: { count?: string }) => {
+              if (opts?.count) {
+                return { gte: async () => ({ count: countChain.count }) };
+              }
+              return {};
+            },
+            insert: () => ({
+              select: () => ({ single: insertSingleMock }),
+            }),
+          },
     storage: {
       from: () => ({
         download: async () => ({
@@ -76,6 +88,7 @@ const analysisResult = {
 beforeEach(() => {
   getUserMock.mockResolvedValue({ data: { user } });
   countChain.count = 0;
+  profileChain.plan = "free";
   insertSingleMock.mockResolvedValue({ data: { id: "analysis-1" }, error: null });
   analyzeMock.mockReset();
   analyzeMock.mockResolvedValue(analysisResult);
@@ -96,9 +109,32 @@ describe("POST /api/analyze", () => {
   });
 
   it("returns 429 when the hourly rate limit is reached", async () => {
+    profileChain.plan = "pro"; // under the monthly cap, over the hourly one
     countChain.count = 10;
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(429);
+  });
+
+  it("returns 402 when a free user hits the monthly limit", async () => {
+    countChain.count = 3;
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(402);
+    const json = await res.json();
+    expect(json.error).toContain("Upgrade to Pro");
+  });
+
+  it("returns 402 when a pro user hits the monthly limit", async () => {
+    profileChain.plan = "pro";
+    countChain.count = 50;
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(402);
+  });
+
+  it("allows a pro user past the free limit", async () => {
+    profileChain.plan = "pro";
+    countChain.count = 5;
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(200);
   });
 
   it("rejects a resume file path belonging to another user", async () => {

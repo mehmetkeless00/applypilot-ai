@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AnalyzeRequest } from "@/lib/ai/schema";
 import { analyze, AnalysisRefusedError, AIConfigError } from "@/lib/ai/analyze";
+import { normalizePlan, PLANS } from "@/lib/billing/plans";
+import { monthStartUtc } from "@/lib/billing/usage";
 
 // Generous headroom for slow model responses; Flash typically answers in seconds.
 export const maxDuration = 300;
@@ -34,7 +36,31 @@ export async function POST(request: Request) {
   }
   const input = parsed.data;
 
-  // Simple per-user rate limit backed by the analyses table.
+  // Monthly plan limit (free 3 / pro 50), reset on UTC calendar months.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", user.id)
+    .single();
+  const plan = normalizePlan(profile?.plan);
+  const monthlyLimit = PLANS[plan].analysesPerMonth;
+  const { count: monthCount } = await supabase
+    .from("analyses")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", monthStartUtc().toISOString());
+  if ((monthCount ?? 0) >= monthlyLimit) {
+    return NextResponse.json(
+      {
+        error:
+          plan === "free"
+            ? `You've used all ${monthlyLimit} free analyses this month. Upgrade to Pro for ${PLANS.pro.analysesPerMonth}/month.`
+            : `You've used all ${monthlyLimit} Pro analyses this month. Your limit resets on the 1st.`,
+      },
+      { status: 402 },
+    );
+  }
+
+  // Simple per-user anti-abuse rate limit backed by the analyses table.
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count } = await supabase
     .from("analyses")

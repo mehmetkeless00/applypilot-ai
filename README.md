@@ -24,7 +24,12 @@ Fill in:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | From Supabase project settings |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From Supabase project settings |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only. From Supabase project settings — needed for Stripe billing (webhook writes plan changes). |
 | `GEMINI_API_KEY` | Server-only. Create one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). |
+| `STRIPE_SECRET_KEY` | Server-only. From the [Stripe dashboard](https://dashboard.stripe.com/apikeys). |
+| `STRIPE_WEBHOOK_SECRET` | Server-only. Signing secret for a webhook endpoint pointed at `/api/stripe/webhook` (locally: `stripe listen --forward-to localhost:3000/api/stripe/webhook`). |
+| `STRIPE_PRO_PRICE_ID` | Price ID of a recurring "Pro" subscription product you create in Stripe. |
+| `NEXT_PUBLIC_APP_URL` | Base URL used in Stripe redirect links, e.g. `http://localhost:3000`. |
 
 ### 3. Run
 
@@ -34,6 +39,15 @@ npm run dev
 ```
 
 Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has deprecated it.
+
+## Plans & billing
+
+| Plan | Analyses per month |
+|---|---|
+| Free | 3 |
+| Pro | 50 |
+
+Limits reset on UTC calendar months and are enforced in `/api/analyze` (HTTP 402 when exhausted). Upgrades run through Stripe Checkout from `/dashboard/billing`; subscription changes (renewal, cancellation, failed payment, expiry) arrive via the `/api/stripe/webhook` endpoint, which updates `profiles.plan` using the service-role key. A failed payment keeps Pro as a grace period (`past_due`) until Stripe gives up and cancels. Migration `0004_billing.sql` restricts profile updates so users can't set their own `plan` through the REST API.
 
 ## How the AI analysis works
 
@@ -55,8 +69,9 @@ Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has de
 ## Deployment (Vercel)
 
 1. Push the repo to GitHub and import it in Vercel.
-2. Set the three environment variables from `.env.local` in the Vercel project settings.
+2. Set all environment variables from `.env.local` in the Vercel project settings (`NEXT_PUBLIC_APP_URL` = your production URL).
 3. Deploy. Add your production URL to Supabase **Auth → URL Configuration** (site URL + `https://<domain>/auth/callback` redirect).
+4. In Stripe, add a webhook endpoint for `https://<domain>/api/stripe/webhook` subscribed to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.payment_failed`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 
 ## Manual verification checklist
 

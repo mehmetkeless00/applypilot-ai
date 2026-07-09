@@ -36,6 +36,12 @@ export default async function DashboardLayout({
               >
                 New analysis
               </Link>
+              <Link
+                href="/dashboard/billing"
+                className="hover:text-slate-900 dark:hover:text-slate-100"
+              >
+                Billing
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
