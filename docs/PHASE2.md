@@ -1,5 +1,10 @@
 # Phase 2 — Implementation Plan
 
+**Status: complete (2026-07-09).** M1 `8f54262` · M2 `c2a7951` · M3 `414ebb9` ·
+M4 `d670600` · M5 `f5ef554`. Final gate: 82 tests, lint, typecheck, build all green.
+Run migrations `0002`–`0004` in the Supabase SQL editor (numeric order) to activate
+ATS keywords, resume suggestions, and billing on a live database.
+
 Baseline: tag `pre-phase-2` (verified: 30 tests, lint, typecheck, build).
 All changes are additive and backward compatible; existing analyses keep rendering
 (new jsonb columns default to `[]`, and the UI hides empty sections).
