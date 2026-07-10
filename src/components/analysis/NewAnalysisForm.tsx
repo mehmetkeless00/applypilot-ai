@@ -61,6 +61,7 @@ export function NewAnalysisForm() {
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
 
   const [resumeMode, setResumeMode] = useState<ResumeMode>("paste");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -88,6 +89,7 @@ export function NewAnalysisForm() {
           : payload.jobDescription,
       );
       setImportedFrom(importUrl);
+      setImportNote(payload.note ?? null);
       setJobMode("paste"); // show the imported text so the user can review/edit
     } catch (err) {
       setImportError(
@@ -216,8 +218,9 @@ export function NewAnalysisForm() {
               disabled={importing}
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-              Supported: Greenhouse, Lever, Ashby, Workable. For LinkedIn, copy
-              the posting text and use the Paste tab.
+              Works best with Greenhouse, Lever, Ashby, and Workable; many
+              other job pages import too, but not all. For LinkedIn, copy the
+              posting text and use the Paste tab.
             </p>
             {importError && (
               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -240,6 +243,12 @@ export function NewAnalysisForm() {
             {importedFrom && (
               <p className="mb-1.5 text-xs text-green-700 dark:text-green-400">
                 Imported from {importedFrom} — review and edit below.
+                {importNote && (
+                  <span className="text-amber-700 dark:text-amber-400">
+                    {" "}
+                    {importNote}
+                  </span>
+                )}
               </p>
             )}
             <Textarea

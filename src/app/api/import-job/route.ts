@@ -11,6 +11,7 @@ const kindToStatus: Record<JobImportError["kind"], number> = {
   invalid_url: 400,
   linkedin: 422,
   unsupported: 422,
+  blocked: 422,
   not_found: 404,
   fetch_failed: 502,
 };

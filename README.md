@@ -40,6 +40,10 @@ npm run dev
 
 Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has deprecated it.
 
+## Job URL import
+
+The "Import from URL" tab fetches a posting server-side. Greenhouse, Lever, Ashby, and Workable use dedicated adapters against their public JSON APIs. Other sites go through a generic pipeline: schema.org `JobPosting` JSON-LD (single objects, arrays, and `@graph`), then Open Graph tags, then semantic HTML extraction — so many, but not all, career pages import. Pages that need JavaScript, a login, or answer with a bot check get a manual-paste message; LinkedIn is always manual-paste. The generic fetcher only requests validated public hosts: http/https only, no private/reserved IPs or internal hostnames (checked lexically **and** after DNS resolution), every redirect re-validated, with a 10s timeout, 5-redirect limit, 2 MB size cap, and HTML/JSON content types only.
+
 ## Plans & billing
 
 | Plan | Analyses per month |

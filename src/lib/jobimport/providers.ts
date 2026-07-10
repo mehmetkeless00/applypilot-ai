@@ -1,32 +1,30 @@
 import { decodeEntities, extractJobPostingJsonLd, htmlToText } from "./html";
+import { JobImportError } from "./errors";
+import { importGenericJob } from "./generic";
+
+export { JobImportError };
 
 export interface ImportedJob {
   jobTitle: string;
   company?: string;
   location?: string;
   jobDescription: string;
-}
-
-/** Import failed for a reason the user can act on. */
-export class JobImportError extends Error {
-  constructor(
-    message: string,
-    public readonly kind: "invalid_url" | "linkedin" | "unsupported" | "fetch_failed" | "not_found",
-  ) {
-    super(message);
-    this.name = "JobImportError";
-  }
+  /** Human-readable caveat, e.g. which fields couldn't be detected. */
+  note?: string;
 }
 
 type ProviderTarget =
   | { provider: "greenhouse"; board: string; jobId: string }
   | { provider: "lever"; company: string; jobId: string }
   | { provider: "ashby"; org: string; jobId: string }
-  | { provider: "workable"; account: string; shortcode: string };
+  | { provider: "workable"; account: string; shortcode: string }
+  | { provider: "generic"; url: string };
 
 /**
- * Parses a job posting URL into a provider target. Only allowlisted hosts are
- * ever fetched — unknown hosts are rejected here, never requested (SSRF guard).
+ * Parses a job posting URL into a provider target. Known job boards get
+ * their dedicated adapter (fixed, trusted API hosts). Anything else becomes
+ * a generic target handled by the hardened pipeline in generic.ts, which
+ * validates the hostname, its DNS resolution, and every redirect (SSRF guard).
  */
 export function parseJobUrl(rawUrl: string): ProviderTarget {
   let url: URL;
@@ -92,10 +90,9 @@ export function parseJobUrl(rawUrl: string): ProviderTarget {
     }
   }
 
-  throw new JobImportError(
-    "This site isn't supported for import yet. Supported: Greenhouse, Lever, Ashby, Workable. Paste the description manually instead.",
-    "unsupported",
-  );
+  // Everything else goes through the generic pipeline, which does its own
+  // SSRF validation before any request is made.
+  return { provider: "generic", url: url.toString() };
 }
 
 const FETCH_HEADERS = {
@@ -276,5 +273,7 @@ export async function importJobFromUrl(rawUrl: string): Promise<ImportedJob> {
       return importAshby(target);
     case "workable":
       return importWorkable(target);
+    case "generic":
+      return importGenericJob(target.url);
   }
 }

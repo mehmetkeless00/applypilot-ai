@@ -51,19 +51,18 @@ describe("parseJobUrl", () => {
     }
   });
 
-  it("rejects unsupported hosts without fetching them", () => {
-    try {
-      parseJobUrl("https://evil.example.com/jobs/1");
-      expect.unreachable();
-    } catch (err) {
-      expect((err as JobImportError).kind).toBe("unsupported");
-    }
+  it("routes unknown hosts to the generic pipeline without fetching", () => {
+    expect(parseJobUrl("https://careers.example.com/jobs/1")).toEqual({
+      provider: "generic",
+      url: "https://careers.example.com/jobs/1",
+    });
   });
 
-  it("rejects supported hosts with unrecognized paths", () => {
-    expect(() => parseJobUrl("https://boards.greenhouse.io/acme")).toThrowError(
-      JobImportError,
-    );
+  it("routes supported hosts with unrecognized paths to the generic pipeline", () => {
+    expect(parseJobUrl("https://boards.greenhouse.io/acme")).toEqual({
+      provider: "generic",
+      url: "https://boards.greenhouse.io/acme",
+    });
   });
 });
 
