@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { UpgradeCard } from "@/components/billing/UpgradeCard";
 import { cn } from "@/lib/utils";
 
 type ResumeMode = "saved" | "paste" | "upload";
@@ -84,6 +85,7 @@ export function NewAnalysisForm({
   const [fileName, setFileName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
 
   async function handleImport() {
     setImportError(null);
@@ -120,6 +122,7 @@ export function NewAnalysisForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setLimitReached(false);
 
     const formData = new FormData(event.currentTarget);
     const resumeText = String(formData.get("resumeText") ?? "");
@@ -184,6 +187,7 @@ export function NewAnalysisForm({
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
+        setLimitReached(response.status === 402);
         throw new Error(payload?.error ?? "Analysis failed. Try again.");
       }
 
@@ -389,11 +393,14 @@ export function NewAnalysisForm({
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-      )}
+      {error &&
+        (limitReached ? (
+          <UpgradeCard message={error} />
+        ) : (
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        ))}
 
       <div className="flex items-center gap-4">
         <Button type="submit" disabled={submitting}>

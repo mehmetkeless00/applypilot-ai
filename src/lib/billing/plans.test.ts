@@ -35,6 +35,13 @@ describe("plan limits", () => {
     expect(PLANS.free.analysesPerMonth).toBe(3);
     expect(PLANS.pro.analysesPerMonth).toBe(50);
   });
+
+  it("exposes display pricing and features for both plans", () => {
+    expect(PLANS.free.priceMonthly).toBe(0);
+    expect(PLANS.pro.priceMonthly).toBeGreaterThan(0);
+    expect(PLANS.free.features.length).toBeGreaterThan(0);
+    expect(PLANS.pro.features.length).toBeGreaterThan(0);
+  });
 });
 
 describe("monthStartUtc", () => {

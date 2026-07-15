@@ -54,10 +54,12 @@ The "Import from URL" tab fetches a posting server-side. Greenhouse, Lever, Ashb
 
 ## Plans & billing
 
-| Plan | Analyses per month |
-|---|---|
-| Free | 3 |
-| Pro | 50 |
+| Plan | Price | Analyses per month |
+|---|---|---|
+| Free | $0 | 3 |
+| Pro | $12/mo | 50 |
+
+The prices shown in the UI come from `src/lib/billing/plans.ts` — keep the **Stripe price** behind `STRIPE_PRO_PRICE_ID` in sync with the displayed $12/month, since Stripe is what actually charges the card.
 
 Limits reset on UTC calendar months and are enforced in `/api/analyze` (HTTP 402 when exhausted). Upgrades run through Stripe Checkout from `/dashboard/billing`; subscription changes (renewal, cancellation, failed payment, expiry) arrive via the `/api/stripe/webhook` endpoint, which updates `profiles.plan` using the service-role key. A failed payment keeps Pro as a grace period (`past_due`) until Stripe gives up and cancels. Migration `0004_billing.sql` restricts profile updates so users can't set their own `plan` through the REST API.
 

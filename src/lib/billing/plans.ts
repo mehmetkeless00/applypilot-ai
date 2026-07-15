@@ -1,8 +1,38 @@
 export type Plan = "free" | "pro";
 
-export const PLANS: Record<Plan, { name: string; analysesPerMonth: number }> = {
-  free: { name: "Free", analysesPerMonth: 3 },
-  pro: { name: "Pro", analysesPerMonth: 50 },
+export interface PlanInfo {
+  name: string;
+  analysesPerMonth: number;
+  /** Display price in USD per month. Keep in sync with the Stripe price. */
+  priceMonthly: number;
+  features: string[];
+}
+
+export const PLANS: Record<Plan, PlanInfo> = {
+  free: {
+    name: "Free",
+    analysesPerMonth: 3,
+    priceMonthly: 0,
+    features: [
+      "3 analyses per month",
+      "Fit score & skills-gap analysis",
+      "ATS keyword coverage",
+      "Tailored summary & cover letter",
+      "Resume library with versions",
+    ],
+  },
+  pro: {
+    name: "Pro",
+    analysesPerMonth: 50,
+    priceMonthly: 12,
+    features: [
+      "50 analyses per month",
+      "Everything in Free",
+      "Re-score as often as you edit",
+      "PDF & DOCX exports",
+      "Priority support",
+    ],
+  },
 };
 
 export function normalizePlan(value: unknown): Plan {

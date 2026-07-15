@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { createClient } from "@/lib/supabase/server";
+import { HeaderUsage } from "@/components/billing/HeaderUsage";
 
 export default async function DashboardLayout({
   children,
@@ -51,7 +52,8 @@ export default async function DashboardLayout({
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-slate-500 sm:inline dark:text-slate-400">
+            <HeaderUsage />
+            <span className="hidden text-sm text-slate-500 lg:inline dark:text-slate-400">
               {user?.email}
             </span>
             <form action={signOut}>
