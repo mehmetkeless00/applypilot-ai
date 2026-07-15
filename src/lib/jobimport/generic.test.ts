@@ -48,6 +48,19 @@ describe("importGenericJob", () => {
     expect(job.note).toBeUndefined();
   });
 
+  it("decodes entity-encoded metadata from JSON-LD", async () => {
+    stubPage(`<html><head><script type="application/ld+json">${JSON.stringify({
+      "@type": "JobPosting",
+      title: "Engineer &amp; Architect",
+      description: `<p>${longBody}</p>`,
+      hiringOrganization: { name: "Labeless (Bytes &amp; Pixels GmbH)" },
+    })}</script></head><body></body></html>`);
+
+    const job = await importGenericJob("https://careers.acme.com/jobs/42");
+    expect(job.jobTitle).toBe("Engineer & Architect");
+    expect(job.company).toBe("Labeless (Bytes & Pixels GmbH)");
+  });
+
   it("falls back to Open Graph + main content when there is no JSON-LD", async () => {
     stubPage(`<html><head>
       <meta property="og:title" content="Data Engineer" />

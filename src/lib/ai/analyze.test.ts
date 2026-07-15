@@ -89,6 +89,15 @@ describe("analyze", () => {
     expect(params.config.systemInstruction).toContain("career coach");
   });
 
+  it("instructs the model to never alter resume facts or dates", async () => {
+    generateMock.mockResolvedValue(mockResponse());
+    await analyze(input);
+    const system = generateMock.mock.calls[0][0].config.systemInstruction;
+    expect(system).toContain("Factual integrity");
+    expect(system).toContain("Never reason about the current date");
+    expect(system).toMatch(/never write "assumed"/i);
+  });
+
   it("throws AnalysisRefusedError when the prompt is blocked", async () => {
     generateMock.mockResolvedValue(
       mockResponse({

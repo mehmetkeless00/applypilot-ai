@@ -127,6 +127,25 @@ describe("GET /api/analyses/[id]/export", () => {
     expect(bytes[1]).toBe(0x4b);
   });
 
+  it("decodes legacy entity-encoded metadata in exports and filenames", async () => {
+    singleMock.mockResolvedValue({
+      data: {
+        ...analysis,
+        job_title: "Engineer &amp; Architect",
+        company: "Labeless (Bytes &amp; Pixels GmbH)",
+      },
+      error: null,
+    });
+    const res = await GET(makeRequest("?format=pdf&doc=summary"), ctx);
+    expect(res.status).toBe(200);
+    // Slug comes from the decoded title — no "-amp-" artifacts.
+    expect(res.headers.get("Content-Disposition")).toContain(
+      'filename="summary-engineer-architect.pdf"',
+    );
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect(new TextDecoder().decode(bytes.slice(0, 4))).toBe("%PDF");
+  });
+
   it("exports the full report as a PDF and defaults to it", async () => {
     const res = await GET(makeRequest(""), ctx);
     expect(res.status).toBe(200);

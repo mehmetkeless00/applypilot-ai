@@ -4,6 +4,7 @@ const {
   getUserMock,
   analysisChain,
   versionChain,
+  storageChain,
   insertPayloads,
   insertSingleMock,
   analyzeMock,
@@ -11,6 +12,7 @@ const {
   getUserMock: vi.fn(),
   analysisChain: { row: null as Record<string, unknown> | null },
   versionChain: { version: null as Record<string, unknown> | null },
+  storageChain: { bytes: null as Buffer | null },
   insertPayloads: [] as Record<string, unknown>[],
   insertSingleMock: vi.fn(),
   analyzeMock: vi.fn(),
@@ -71,7 +73,14 @@ vi.mock("@/lib/supabase/server", () => ({
         },
       };
     },
-    storage: { from: () => ({ download: async () => ({ data: null, error: null }) }) },
+    storage: {
+      from: () => ({
+        download: async () =>
+          storageChain.bytes
+            ? { data: new Blob([new Uint8Array(storageChain.bytes)]), error: null }
+            : { data: null, error: { message: "no file" } },
+      }),
+    },
   }),
 }));
 
@@ -107,6 +116,7 @@ beforeEach(() => {
   getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
   analysisChain.row = { ...baseAnalysis };
   versionChain.version = null;
+  storageChain.bytes = null;
   insertPayloads.length = 0;
   insertSingleMock.mockResolvedValue({ data: { id: "analysis-2" }, error: null });
   analyzeMock.mockReset();
@@ -169,5 +179,55 @@ describe("POST /api/analyses/[id]/rescore", () => {
   it("returns 400 when no resume source survives", async () => {
     analysisChain.row = { ...baseAnalysis, resume_text: null };
     expect((await POST(makeRequest(), ctx)).status).toBe(400);
+  });
+
+  it("prefers a version's parsed text over its PDF", async () => {
+    analysisChain.row = { ...baseAnalysis, resume_id: "resume-1" };
+    versionChain.version = {
+      id: "version-3",
+      resume_id: "resume-1",
+      version: 3,
+      content: "parsed resume text ".repeat(10),
+      file_path: "user-123/cv.pdf",
+      source: "pdf",
+    };
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    const call = analyzeMock.mock.calls[0][0];
+    // Text used, PDF left untouched (a download would have failed: the
+    // storage mock returns no data).
+    expect(call.resumeText).toContain("parsed resume text");
+    expect(call.resumePdfBase64).toBeUndefined();
+  });
+
+  it("falls back to the PDF when a version has no parsed text", async () => {
+    analysisChain.row = { ...baseAnalysis, resume_id: "resume-1" };
+    versionChain.version = {
+      id: "version-1",
+      resume_id: "resume-1",
+      version: 1,
+      content: null,
+      file_path: "user-123/cv.pdf",
+      source: "pdf",
+    };
+    storageChain.bytes = Buffer.from(`%PDF-1.4 fake ${"x".repeat(60)}`);
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    const call = analyzeMock.mock.calls[0][0];
+    expect(call.resumePdfBase64).toBeTruthy();
+    expect(call.resumeText).toBeUndefined();
+  });
+
+  it("re-persists decoded metadata when re-scoring a legacy analysis", async () => {
+    analysisChain.row = {
+      ...baseAnalysis,
+      job_title: "Engineer &amp; Architect",
+      company: "Bytes &amp; Pixels GmbH",
+    };
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.job_title).toBe("Engineer & Architect");
+    expect(insert?.company).toBe("Bytes & Pixels GmbH");
   });
 });

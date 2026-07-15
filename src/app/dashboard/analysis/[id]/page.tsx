@@ -13,6 +13,7 @@ import { ExportButtons } from "@/components/analysis/ExportButtons";
 import { RescoreButton } from "@/components/analysis/RescoreButton";
 import { ScoreDelta } from "@/components/analysis/ScoreDelta";
 import { formatDate } from "@/lib/utils";
+import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
 
 export const metadata = { title: "Analysis" };
@@ -31,7 +32,8 @@ export default async function AnalysisPage({
     .single();
 
   if (!data) notFound();
-  const analysis = data as Analysis;
+  // Decode legacy entity-encoded metadata for display.
+  const analysis = decodeAnalysisMetadata(data as Analysis);
   const slug = analysis.job_title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   // When this run re-scored an earlier one, fetch it for the delta display.

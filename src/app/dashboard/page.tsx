@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, scoreTone } from "@/lib/utils";
+import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
 
 export const metadata = { title: "My analyses" };
@@ -28,10 +29,11 @@ export default async function DashboardPage() {
     .select("id, job_title, company, fit_score, created_at, rescored_from")
     .order("created_at", { ascending: false });
 
-  const analyses = (data ?? []) as Pick<
+  // Legacy imports may hold entity-encoded metadata — decode for display.
+  const analyses = ((data ?? []) as Pick<
     Analysis,
     "id" | "job_title" | "company" | "fit_score" | "created_at" | "rescored_from"
-  >[];
+  >[]).map(decodeAnalysisMetadata);
 
   const total = analyses.length;
   const avg = total

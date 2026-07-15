@@ -238,6 +238,39 @@ describe("POST /api/analyze", () => {
     expect(res.status).toBe(404);
   });
 
+  it("drops resume suggestions that alter facts before saving", async () => {
+    analyzeMock.mockResolvedValue({
+      ...analysisResult,
+      result: {
+        ...analysisResult.result,
+        resume_suggestions: [
+          {
+            section: "Experience",
+            original_text: "July 2025: Led data platform work.",
+            improved_text: "July 2025: Directed data platform work.",
+            reason: "Stronger verb.",
+            impact: "medium",
+          },
+          {
+            section: "Experience",
+            original_text: "July 2025: Led data platform work.",
+            improved_text: "July 2024: Led data platform work (assumed corrected date).",
+            reason: "Date looked off.",
+            impact: "low",
+          },
+        ],
+      },
+    });
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(200);
+    const insert = insertPayloads.find((p) => "fit_score" in p) as {
+      resume_suggestions: Array<{ improved_text: string }>;
+    };
+    expect(insert.resume_suggestions).toHaveLength(1);
+    expect(insert.resume_suggestions[0].improved_text).toContain("July 2025");
+    expect(JSON.stringify(insert.resume_suggestions)).not.toMatch(/assumed/i);
+  });
+
   it("maps a refusal to a 422 with a friendly message", async () => {
     analyzeMock.mockRejectedValue(new AnalysisRefusedError());
     const res = await POST(makeRequest(validBody));

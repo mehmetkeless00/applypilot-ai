@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/Badge";
 import { ResumeEditor } from "@/components/resumes/ResumeEditor";
 import { ResumeTitleForm } from "@/components/resumes/ResumeTitleForm";
 import { DeleteResumeButton } from "@/components/resumes/DeleteResumeButton";
+import { loadPdfForResume } from "@/lib/resumes/resumes";
 import { formatDate, scoreTone } from "@/lib/utils";
+import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis, Resume, ResumeVersion } from "@/lib/types";
 
 const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
@@ -41,11 +43,21 @@ export default async function ResumePage({
   const resume = resumeData as Resume;
   const versions = (versionData ?? []) as ResumeVersion[];
   const latest = versions[0];
-  const history = (analysisData ?? []) as Array<
-    Pick<Analysis, "id" | "job_title" | "company" | "fit_score" | "created_at"> & {
-      resume_version_id: string | null;
-    }
-  >;
+
+  // Legacy PDF versions predate server-side text extraction — attempt it
+  // on demand so the editor never shows an unexplained empty textarea.
+  let extractedFromPdf: string | null = null;
+  if (latest && latest.content == null && latest.file_path) {
+    const loaded = await loadPdfForResume(supabase, resume.user_id, latest.file_path);
+    if (loaded.ok) extractedFromPdf = loaded.content;
+  }
+  const history = (
+    (analysisData ?? []) as Array<
+      Pick<Analysis, "id" | "job_title" | "company" | "fit_score" | "created_at"> & {
+        resume_version_id: string | null;
+      }
+    >
+  ).map(decodeAnalysisMetadata);
   const versionNumber = new Map(versions.map((v) => [v.id, v.version]));
 
   return (
@@ -89,12 +101,24 @@ export default async function ResumePage({
               v{latest?.version ?? 1} · PDF
             </span>
           </CardTitle>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            This version is an uploaded PDF. To make edits, paste the text
-            below and save it as a new version.
-          </p>
+          {extractedFromPdf ? (
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              We extracted the text from your uploaded PDF — review it below
+              and save to create an editable version. The original PDF stays
+              stored unchanged.
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              We couldn&apos;t extract text from this PDF (it may be scanned
+              or image-based). Paste your resume text below to make it
+              editable — analyses keep using the original PDF until then.
+            </p>
+          )}
           <div className="mt-4">
-            <ResumeEditor resumeId={resume.id} initialContent="" />
+            <ResumeEditor
+              resumeId={resume.id}
+              initialContent={extractedFromPdf ?? ""}
+            />
           </div>
         </Card>
       )}

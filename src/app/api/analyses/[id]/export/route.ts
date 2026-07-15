@@ -8,6 +8,7 @@ import {
 } from "@/lib/export/content";
 import { analysisDocxBuffer } from "@/lib/export/docx";
 import { analysisPdfBuffer } from "@/lib/export/pdf";
+import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
 
 const contentTypes = {
@@ -65,7 +66,9 @@ export async function GET(
   if (!data) {
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
-  const analysis = data as Analysis;
+  // Decode legacy entity-encoded metadata so documents and filenames read
+  // "Bytes & Pixels GmbH", not "Bytes &amp; Pixels GmbH".
+  const analysis = decodeAnalysisMetadata(data as Analysis);
 
   try {
     const buffer =

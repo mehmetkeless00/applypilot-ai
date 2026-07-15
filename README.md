@@ -51,6 +51,10 @@ Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has de
 
 Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every edit creates an immutable new version, and each analysis records exactly which resume version it scored (`analyses.resume_id` / `resume_version_id`). The new-analysis form defaults to your saved resume; pasted or uploaded resumes can be saved to the library in the same step. Deleting a resume keeps past analyses intact (links null out). Migration: `0005_resumes.sql`.
 
+**PDF text extraction** — uploaded PDF resumes have their text extracted server-side (`unpdf`, a serverless-friendly pdf.js wrapper) and stored on the version alongside the original PDF path, so the resume editor prefills and edits create new text versions. Analyses prefer the parsed/edited text and fall back to the original PDF only when no text exists (e.g. scanned PDFs). Legacy PDF versions without stored text get on-demand extraction on the resume page, with a clear manual-paste fallback if the PDF has no extractable text.
+
+**Factual integrity** — the analysis prompt forbids altering resume facts (dates, companies, titles, locations, degrees, technologies, metrics), and a deterministic post-generation guard (`src/lib/ai/sanitize.ts`) drops any resume suggestion whose rewrite introduces years, metrics, or proper nouns that the original text and resume don't contain, and scrubs "assumed/corrected date"-style qualifiers from all narrative fields.
+
 ## Re-score loop
 
 Every analysis has a **Re-score** button: it re-runs the same job against the *latest* version of the linked saved resume (or the original resume text for legacy analyses) and records the lineage in `analyses.rescored_from` (migration `0006_rescore.sql`). Re-scored analyses show the score delta against the previous run, resume pages show a score history across versions, and the dashboard shows aggregate stats. Re-scores count toward plan limits like any analysis.

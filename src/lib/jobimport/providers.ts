@@ -1,6 +1,7 @@
 import { decodeEntities, extractJobPostingJsonLd, htmlToText } from "./html";
 import { JobImportError } from "./errors";
 import { importGenericJob } from "./generic";
+import { cleanMetadataText } from "@/lib/text";
 
 export { JobImportError };
 
@@ -136,16 +137,19 @@ function finalize(
   descriptionText: string | undefined,
 ): ImportedJob {
   const jobDescription = descriptionText?.trim() ?? "";
-  if (!title || jobDescription.length < 50) {
+  // Provider APIs sometimes return entity-encoded metadata ("Bytes &amp;
+  // Pixels GmbH") — normalize before it's shown or persisted.
+  const cleanTitle = cleanMetadataText(title);
+  if (!cleanTitle || jobDescription.length < 50) {
     throw new JobImportError(
       "Couldn't extract a usable job description from that page. Paste it manually instead.",
       "not_found",
     );
   }
   return {
-    jobTitle: title.trim(),
-    company: company?.trim() || undefined,
-    location: location?.trim() || undefined,
+    jobTitle: cleanTitle,
+    company: cleanMetadataText(company),
+    location: cleanMetadataText(location),
     jobDescription,
   };
 }

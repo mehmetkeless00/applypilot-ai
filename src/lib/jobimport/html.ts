@@ -2,36 +2,9 @@
 // Job boards return simple formatted HTML (p, br, li, headings) — a full
 // parser dependency isn't warranted.
 
-const NAMED_ENTITIES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-  ndash: "–",
-  mdash: "—",
-  hellip: "…",
-  rsquo: "’",
-  lsquo: "‘",
-  rdquo: "”",
-  ldquo: "“",
-  bull: "•",
-  middot: "·",
-  eacute: "é",
-  amp_: "&",
-};
+import { decodeHtmlEntities } from "@/lib/text";
 
-export function decodeEntities(text: string): string {
-  return text
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16)),
-    )
-    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
-    .replace(/&([a-zA-Z]+);/g, (match, name: string) =>
-      NAMED_ENTITIES[name.toLowerCase()] ?? match,
-    );
-}
+export const decodeEntities = decodeHtmlEntities;
 
 export function htmlToText(html: string): string {
   const text = html

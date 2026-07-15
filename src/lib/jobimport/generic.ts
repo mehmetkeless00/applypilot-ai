@@ -8,6 +8,7 @@ import {
 } from "./generic-html";
 import { extractJobPostingFromJsonLd } from "./generic-jsonld";
 import { safeFetch } from "./safe-fetch";
+import { cleanMetadataText } from "@/lib/text";
 
 export interface GenericImportedJob {
   jobTitle: string;
@@ -48,12 +49,16 @@ export async function importGenericJob(url: string): Promise<GenericImportedJob>
     jsonLd.description &&
     jsonLd.description.length >= MIN_DESCRIPTION_CHARS / 2
   ) {
+    // JSON-LD script content is not entity-decoded by the HTML parser, so
+    // metadata can arrive encoded ("Bytes &amp; Pixels GmbH").
+    const company = cleanMetadataText(jsonLd.company);
+    const location = cleanMetadataText(jsonLd.location);
     return {
-      jobTitle: jsonLd.title,
-      company: jsonLd.company,
-      location: jsonLd.location,
+      jobTitle: cleanMetadataText(jsonLd.title) ?? jsonLd.title,
+      company,
+      location,
       jobDescription: jsonLd.description,
-      note: noteForMissing(jsonLd.company, jsonLd.location),
+      note: noteForMissing(company, location),
     };
   }
 
@@ -84,11 +89,13 @@ export async function importGenericJob(url: string): Promise<GenericImportedJob>
     );
   }
 
+  const cleanCompany = cleanMetadataText(company);
+  const cleanLocation = cleanMetadataText(location);
   return {
-    jobTitle: title,
-    company,
-    location,
+    jobTitle: cleanMetadataText(title) ?? title,
+    company: cleanCompany,
+    location: cleanLocation,
     jobDescription: description,
-    note: noteForMissing(company, location),
+    note: noteForMissing(cleanCompany, cleanLocation),
   };
 }

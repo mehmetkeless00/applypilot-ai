@@ -104,6 +104,21 @@ describe("importJobFromUrl (adapters, mocked fetch)", () => {
     expect(job.jobDescription).not.toContain("<p>");
   });
 
+  it("decodes HTML entities in title, company, and location metadata", async () => {
+    stubFetch({
+      jsonBody: {
+        title: "Engineer &amp; Architect",
+        company_name: "Labeless (Bytes &amp; Pixels GmbH)",
+        location: { name: "K&#246;ln, Germany" },
+        content: `<p>${"We build things. ".repeat(10)}</p>`,
+      },
+    });
+    const job = await importJobFromUrl("https://boards.greenhouse.io/acme/jobs/7");
+    expect(job.jobTitle).toBe("Engineer & Architect");
+    expect(job.company).toBe("Labeless (Bytes & Pixels GmbH)");
+    expect(job.location).toBe("Köln, Germany");
+  });
+
   it("imports a Lever posting including list sections", async () => {
     stubFetch({
       jsonBody: {

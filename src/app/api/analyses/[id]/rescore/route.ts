@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analysisErrorResponse, executeAnalysis } from "@/lib/analysis/execute";
+import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -33,7 +34,9 @@ export async function POST(
   if (!data) {
     return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
   }
-  const original = data as Analysis;
+  // Decode legacy entity-encoded metadata so the re-scored analysis is
+  // persisted with clean values.
+  const original = decodeAnalysisMetadata(data as Analysis);
 
   const hasSavedResume = Boolean(original.resume_id);
   if (!hasSavedResume && !original.resume_text && !original.resume_file_path) {

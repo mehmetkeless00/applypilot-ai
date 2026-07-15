@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ResumeVersion } from "@/lib/types";
+import { extractPdfText } from "./extract";
 
 // Data helpers for the resume library. All queries run through the caller's
 // RLS-scoped client, so ownership checks are enforced by the database.
@@ -8,6 +9,41 @@ export interface NewVersionInput {
   content?: string;
   filePath?: string;
   source: "paste" | "pdf";
+}
+
+export const MAX_RESUME_PDF_BYTES = 10 * 1024 * 1024;
+
+export type PdfLoadResult =
+  | { ok: true; bytes: Buffer; content: string | null }
+  | { ok: false; error: string };
+
+/**
+ * Downloads an uploaded resume PDF from storage, validates it (owner
+ * prefix, size, magic bytes), and extracts its text. `content` is null
+ * when the PDF has no extractable text (e.g. a scanned image).
+ */
+export async function loadPdfForResume(
+  supabase: SupabaseClient,
+  userId: string,
+  filePath: string,
+): Promise<PdfLoadResult> {
+  if (!filePath.startsWith(`${userId}/`)) {
+    return { ok: false, error: "Invalid resume file." };
+  }
+  const { data: file, error } = await supabase.storage
+    .from("resumes")
+    .download(filePath);
+  if (error || !file) {
+    return { ok: false, error: "Could not read the uploaded PDF. Try again." };
+  }
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (bytes.byteLength > MAX_RESUME_PDF_BYTES) {
+    return { ok: false, error: "The PDF is too large (max 10 MB)." };
+  }
+  if (!bytes.subarray(0, 5).toString("latin1").startsWith("%PDF-")) {
+    return { ok: false, error: "The uploaded file isn't a valid PDF." };
+  }
+  return { ok: true, bytes, content: await extractPdfText(bytes) };
 }
 
 export async function fetchLatestVersion(

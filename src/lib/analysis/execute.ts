@@ -2,6 +2,7 @@ import { ApiError } from "@google/genai";
 import { NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { analyze, AnalysisRefusedError, AIConfigError } from "@/lib/ai/analyze";
+import { sanitizeAnalysisResult } from "@/lib/ai/sanitize";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
 import {
   countUsageSince,
@@ -10,6 +11,7 @@ import {
   recordUsage,
 } from "@/lib/billing/usage";
 import { createResumeWithVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
+import { extractPdfText } from "@/lib/resumes/extract";
 
 // Shared analysis execution used by POST /api/analyze and the re-score
 // route: plan limits, resume resolution, the AI call, and the insert.
@@ -84,8 +86,15 @@ export async function executeAnalysis(
     if (!version) {
       throw new AnalysisRequestError("That saved resume wasn't found.", 404);
     }
-    resumeText = version.content ?? undefined;
-    resumeFilePath = version.file_path ?? undefined;
+    if (version.content) {
+      // Parsed/edited text is preferred; the original PDF stays in storage
+      // untouched and is only used when no text exists (e.g. scanned PDFs).
+      resumeText = version.content;
+      resumeFilePath = undefined;
+    } else {
+      resumeText = undefined;
+      resumeFilePath = version.file_path ?? undefined;
+    }
     resumeId = input.resumeId;
     resumeVersionId = version.id;
   }
@@ -93,6 +102,7 @@ export async function executeAnalysis(
   // When a PDF was uploaded, fetch it from storage (RLS scopes access,
   // but verify the path prefix anyway) and base64-encode for the model.
   let resumePdfBase64: string | undefined;
+  let parsedPdfText: string | null = null;
   if (resumeFilePath) {
     if (!resumeFilePath.startsWith(`${user.id}/`)) {
       throw new AnalysisRequestError("Invalid resume file", 400);
@@ -112,6 +122,9 @@ export async function executeAnalysis(
       );
     }
     resumePdfBase64 = bytes.toString("base64");
+    // Best-effort text: feeds the anti-fabrication corpus and, when the
+    // resume is saved to the library, makes the version editable.
+    parsedPdfText = await extractPdfText(bytes);
   }
 
   // Optionally save an inline resume to the library before analyzing.
@@ -121,7 +134,7 @@ export async function executeAnalysis(
       user.id,
       input.saveResumeTitle,
       {
-        content: resumeText,
+        content: resumeText ?? parsedPdfText ?? undefined,
         filePath: resumeFilePath,
         source: resumeFilePath ? "pdf" : "paste",
       },
@@ -132,13 +145,20 @@ export async function executeAnalysis(
     }
   }
 
-  const { result, servedBy } = await analyze({
+  const { result: rawResult, servedBy } = await analyze({
     jobTitle: input.jobTitle,
     company: input.company,
     jobDescription: input.jobDescription,
     resumeText: resumePdfBase64 ? undefined : resumeText,
     resumePdfBase64,
   });
+
+  // Deterministic anti-fabrication guard: drops suggestions that altered
+  // or invented facts (dates, metrics, names) and scrubs guess qualifiers.
+  const { result } = sanitizeAnalysisResult(
+    rawResult,
+    resumeText ?? parsedPdfText ?? undefined,
+  );
 
   const { data: row, error: insertError } = await supabase
     .from("analyses")

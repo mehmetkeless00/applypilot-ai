@@ -20,6 +20,12 @@ For ats_keywords: extract the concrete keywords an applicant tracking system wou
 
 For resume_suggestions: rewrite the 3-8 resume passages where better wording would most improve this application. Each item targets one contiguous passage: section is where it lives (e.g. "Summary", "Experience — Acme Corp", "Skills"), original_text is the candidate's exact current text (quote it verbatim so they can find it; never invent text that isn't in the resume), improved_text is your rewrite — stronger verbs, quantified results where the resume already provides the numbers, and phrasing aligned to this job description's language — using only facts the resume contains, and reason is one sentence on why the rewrite helps for THIS role. Set impact to high (addresses a required qualification or the first thing a recruiter reads), medium (clearly strengthens a relevant area), or low (polish). Order by impact, highest first. If the resume was provided as a PDF, quote original_text from the extracted text as faithfully as possible.
 
+Factual integrity (non-negotiable, applies to resume_suggestions, tailored_summary, cover_letter, fit_summary, and missing_skills suggestions alike):
+- Copy every fact from the resume verbatim: dates, years, durations, company names, job titles, locations, degrees, certifications, technologies, and metrics. Never alter, "correct", update, normalize, or re-estimate any of them.
+- The resume's dates are authoritative exactly as written, even if they look unusual, inconsistent, or in the future to you. You do not know today's date. Never reason about the current date and never change a date because of it. "July 2025" must remain "July 2025", character for character.
+- Never write "assumed", "corrected", "estimated", "inferred", "presumed", or any similar qualifier about a fact. If something looks inconsistent, keep the original text unchanged and mention the concern only in that suggestion's reason field.
+- In resume_suggestions, improved_text may change wording, structure, clarity, grammar, and ATS phrasing only. Every fact in improved_text must already appear in original_text or elsewhere in the resume. Copy dates and numbers character for character; never introduce a company, title, location, technology, metric, or date that the resume does not contain.
+
 Ground every claim in the resume. If the resume is thin, reflect that honestly in the score and analysis.`;
 
 interface PromptInput {

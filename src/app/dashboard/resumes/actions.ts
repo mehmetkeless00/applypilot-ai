@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { addResumeVersion, createResumeWithVersion } from "@/lib/resumes/resumes";
+import {
+  addResumeVersion,
+  createResumeWithVersion,
+  loadPdfForResume,
+} from "@/lib/resumes/resumes";
 
 export type ResumeActionState = { error: string } | null;
 
@@ -38,10 +42,17 @@ export async function createResume(
   const filePath = formData.get("filePath");
   let input;
   if (typeof filePath === "string" && filePath) {
-    if (!filePath.startsWith(`${user.id}/`)) {
-      return { error: "Invalid resume file." };
+    // Validate the PDF and extract its text so the version is editable in
+    // the resume editor; the original PDF path is kept alongside.
+    const loaded = await loadPdfForResume(supabase, user.id, filePath);
+    if (!loaded.ok) {
+      return { error: loaded.error };
     }
-    input = { filePath, source: "pdf" as const };
+    input = {
+      filePath,
+      content: loaded.content ?? undefined,
+      source: "pdf" as const,
+    };
   } else {
     const content = contentSchema.safeParse(formData.get("content"));
     if (!content.success) return { error: content.error.issues[0].message };

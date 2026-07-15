@@ -32,9 +32,19 @@ export const AnalysisResult = z.object({
   resume_suggestions: z.array(
     z.object({
       section: z.string(),
-      original_text: z.string(),
-      improved_text: z.string(),
-      reason: z.string(),
+      original_text: z
+        .string()
+        .describe("The candidate's exact current text, quoted verbatim from the resume."),
+      improved_text: z
+        .string()
+        .describe(
+          "Rewrite of original_text. Wording, structure, and ATS phrasing only — every fact (dates, years, numbers, companies, titles, locations, technologies) must be copied verbatim from original_text or the resume. Never invent or 'correct' facts, and never alter dates.",
+        ),
+      reason: z
+        .string()
+        .describe(
+          "One sentence on why the rewrite helps. Any concern about inconsistent-looking facts belongs here, never in improved_text.",
+        ),
       impact: z.enum(["low", "medium", "high"]),
     }),
   ),
