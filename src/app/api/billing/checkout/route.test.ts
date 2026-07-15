@@ -6,12 +6,14 @@ const {
   customersCreateMock,
   sessionsCreateMock,
   adminUpdates,
+  billingState,
 } = vi.hoisted(() => ({
   getUserMock: vi.fn(),
   profileChain: { profile: null as Record<string, unknown> | null },
   customersCreateMock: vi.fn(),
   sessionsCreateMock: vi.fn(),
   adminUpdates: [] as Record<string, unknown>[],
+  billingState: { available: true },
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -41,6 +43,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/billing/stripe", () => ({
   BillingConfigError: class BillingConfigError extends Error {},
   assertBillingConfig: () => {},
+  billingAvailable: () => billingState.available,
+  missingBillingConfig: () =>
+    billingState.available ? [] : ["STRIPE_SECRET_KEY", "STRIPE_PRO_PRICE_ID"],
   getProPriceId: () => process.env.STRIPE_PRO_PRICE_ID as string,
   getStripe: () => ({
     customers: { create: customersCreateMock },
@@ -59,6 +64,7 @@ function makeRequest(body?: unknown) {
 }
 
 beforeEach(() => {
+  billingState.available = true;
   process.env.STRIPE_PRO_PRICE_ID = "price_server_configured";
   process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
   getUserMock.mockResolvedValue({
@@ -77,6 +83,30 @@ describe("POST /api/billing/checkout", () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
     expect((await POST(makeRequest())).status).toBe(401);
     expect(sessionsCreateMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses checkout with a neutral message when billing is not configured", async () => {
+    billingState.available = false;
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const res = await POST(makeRequest());
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error).toBe(
+      "Pro subscriptions are not available yet. The Free plan remains fully usable.",
+    );
+    // Env var names stay in server logs, never in the response.
+    expect(JSON.stringify(body)).not.toContain("STRIPE");
+    expect(JSON.stringify(body)).not.toContain("configured on the server");
+    expect(errorSpy.mock.calls.flat().join(" ")).toContain("STRIPE_SECRET_KEY");
+    expect(sessionsCreateMock).not.toHaveBeenCalled();
+    expect(customersCreateMock).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("still rejects unauthenticated requests when billing is not configured", async () => {
+    billingState.available = false;
+    getUserMock.mockResolvedValue({ data: { user: null } });
+    expect((await POST(makeRequest())).status).toBe(401);
   });
 
   it("rejects users already on Pro", async () => {

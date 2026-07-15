@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
+import {
+  OnboardingChecklist,
+  shouldShowOnboarding,
+} from "@/components/dashboard/OnboardingChecklist";
 import { formatDate, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
@@ -36,6 +40,17 @@ export default async function DashboardPage() {
   >[]).map(decodeAnalysisMetadata);
 
   const total = analyses.length;
+
+  // Onboarding progress comes from the user's own rows (RLS-scoped) and is
+  // only queried while there's no analysis yet.
+  let hasResume = false;
+  if (shouldShowOnboarding(total)) {
+    const { count } = await supabase
+      .from("resumes")
+      .select("id", { count: "exact", head: true });
+    hasResume = (count ?? 0) > 0;
+  }
+
   const avg = total
     ? Math.round(analyses.reduce((sum, a) => sum + a.fit_score, 0) / total)
     : 0;
@@ -65,21 +80,9 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {analyses.length === 0 ? (
-        <div className="mt-16 text-center">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            No analyses yet
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
-            Paste a job description and your resume to get a fit score,
-            skills-gap analysis, and a tailored cover letter.
-          </p>
-          <Link
-            href="/dashboard/new"
-            className="mt-6 inline-block rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-          >
-            Analyze your first application
-          </Link>
+      {shouldShowOnboarding(total) ? (
+        <div className="mt-8">
+          <OnboardingChecklist hasResume={hasResume} />
         </div>
       ) : (
         <ul className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">

@@ -123,13 +123,25 @@ export default async function ResumePage({
         </Card>
       )}
 
-      {history.length > 0 && (
-        <Card>
-          <CardTitle>Score history</CardTitle>
+      <Card>
+        <CardTitle>Score history</CardTitle>
+        {history.length === 0 ? (
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Analyses that used this resume, newest first.
+            No scores yet — results appear here after you{" "}
+            <Link
+              href="/dashboard/new"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              analyze a job
+            </Link>{" "}
+            or re-score one with this resume.
           </p>
-          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
+        ) : (
+          <>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Analyses that used this resume, newest first.
+            </p>
+            <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
             {history.map((a) => (
               <li key={a.id}>
                 <Link
@@ -154,9 +166,10 @@ export default async function ResumePage({
                 </Link>
               </li>
             ))}
-          </ul>
-        </Card>
-      )}
+            </ul>
+          </>
+        )}
+      </Card>
 
       {versions.length > 1 && (
         <Card>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { NewResumeForm } from "@/components/resumes/NewResumeForm";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
 import type { Resume } from "@/lib/types";
 
@@ -31,6 +32,14 @@ export default async function ResumesPage() {
         </p>
       </div>
 
+      {resumes.length === 0 && (
+        <EmptyState
+          title="No resumes yet"
+          description="Saved resumes are versioned — every edit becomes a new version you can re-score, so you can watch your fit improve as you refine it."
+          cta={{ href: "#add-resume", label: "Add your first resume" }}
+        />
+      )}
+
       {resumes.length > 0 && (
         <ul className="divide-y divide-slate-200 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">
           {resumes.map((resume) => {
@@ -59,7 +68,7 @@ export default async function ResumesPage() {
         </ul>
       )}
 
-      <div className="max-w-2xl">
+      <div id="add-resume" className="max-w-2xl scroll-mt-6">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
           {resumes.length === 0 ? "Add your first resume" : "Add another resume"}
         </h2>

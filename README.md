@@ -72,6 +72,8 @@ The "Import from URL" tab fetches a posting server-side. Greenhouse, Lever, Ashb
 
 The prices shown in the UI come from `src/lib/billing/plans.ts` — keep the **Stripe price** behind `STRIPE_PRO_PRICE_ID` in sync with the displayed $12/month, since Stripe is what actually charges the card. The same `PLANS` config drives both the UI and server-side quota enforcement — limits are never duplicated or trusted from the client.
 
+**Billing not configured yet?** The app degrades intentionally: while any Stripe env var is missing (`billingAvailable()` in `src/lib/billing/stripe.ts`), Pro shows as a non-clickable **"Coming soon"** on the landing page, the billing page, and the quota-reached card, checkout requests are refused with a neutral 503 ("Pro subscriptions are not available yet. The Free plan remains fully usable."), and the Free plan keeps working unchanged. Env var names appear only in server logs, never in responses or the UI. Setting all four variables (and redeploying) re-enables real Upgrade/Portal behavior with no code change.
+
 ### Subscription status policy
 
 Plan is always derived server-side from the Stripe-reported status (`planFromSubscriptionStatus` in `plans.ts`):

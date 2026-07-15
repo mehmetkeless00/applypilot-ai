@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { BillingConfigError, getStripe } from "@/lib/billing/stripe";
+import { PRO_UNAVAILABLE_MESSAGE } from "@/lib/billing/plans";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -37,8 +38,8 @@ export async function POST(request: Request) {
     if (err instanceof BillingConfigError) {
       console.error(err.message);
       return NextResponse.json(
-        { error: "Billing is not configured on the server." },
-        { status: 500 },
+        { error: PRO_UNAVAILABLE_MESSAGE },
+        { status: 503 },
       );
     }
     console.error("Billing portal error:", err);

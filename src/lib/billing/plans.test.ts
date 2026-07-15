@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { normalizePlan, PLANS, planFromSubscriptionStatus } from "./plans";
-import { missingBillingConfig } from "./stripe";
+import { billingAvailable, missingBillingConfig } from "./stripe";
 import { monthStartUtc } from "./usage";
 
 describe("planFromSubscriptionStatus", () => {
@@ -44,6 +44,29 @@ describe("missingBillingConfig", () => {
     process.env.STRIPE_PRO_PRICE_ID = "price_1";
     process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
     expect(missingBillingConfig()).toEqual([]);
+  });
+});
+
+describe("billingAvailable", () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    process.env = { ...saved };
+  });
+
+  it("is false while any billing variable is unset", () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_1";
+    process.env.STRIPE_PRO_PRICE_ID = "price_1";
+    process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
+    expect(billingAvailable()).toBe(false);
+  });
+
+  it("flips to true automatically once all variables are set", () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_1";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_1";
+    process.env.STRIPE_PRO_PRICE_ID = "price_1";
+    process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
+    expect(billingAvailable()).toBe(true);
   });
 });
 

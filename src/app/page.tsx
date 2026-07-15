@@ -1,8 +1,12 @@
 import Link from "next/link";
-import { PlanCard } from "@/components/billing/PlanCards";
+import { ComingSoonAction, PlanCard } from "@/components/billing/PlanCards";
 import { SampleReport } from "@/components/marketing/SampleReport";
+import { billingAvailable } from "@/lib/billing/stripe";
 
 // Fully static — no per-request auth check, so the marketing page is cached.
+// billingAvailable() reads env vars at build time, which is exactly right:
+// configuring Stripe (a deploy-time change) flips Pro from "Coming soon" to
+// purchasable on the next deploy without a code change.
 
 const steps = [
   {
@@ -79,6 +83,7 @@ const faqs = [
 ];
 
 export default function LandingPage() {
+  const proAvailable = billingAvailable();
   return (
     <div className="flex min-h-dvh flex-col bg-white dark:bg-slate-950">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
@@ -191,8 +196,9 @@ export default function LandingPage() {
               Simple pricing
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-center text-sm text-slate-600 dark:text-slate-400">
-              Start free. Upgrade when your search gets serious. Cancel
-              anytime.
+              {proAvailable
+                ? "Start free. Upgrade when your search gets serious. Cancel anytime."
+                : "Start free — 3 analyses a month, no credit card required."}
             </p>
             <div className="mt-10 grid gap-6 sm:grid-cols-2">
               <PlanCard
@@ -208,13 +214,18 @@ export default function LandingPage() {
               />
               <PlanCard
                 plan="pro"
+                comingSoon={!proAvailable}
                 action={
-                  <Link
-                    href="/signup"
-                    className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
-                  >
-                    Get Pro
-                  </Link>
+                  proAvailable ? (
+                    <Link
+                      href="/signup"
+                      className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                    >
+                      Get Pro
+                    </Link>
+                  ) : (
+                    <ComingSoonAction />
+                  )
                 }
               />
             </div>

@@ -56,8 +56,10 @@ function ModeTabs<T extends string>({
 
 export function NewAnalysisForm({
   savedResumes = [],
+  billingAvailable = true,
 }: {
   savedResumes?: SavedResumeOption[];
+  billingAvailable?: boolean;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -400,7 +402,7 @@ export function NewAnalysisForm({
 
       {error &&
         (limitReached ? (
-          <UpgradeCard message={error} />
+          <UpgradeCard message={error} billingAvailable={billingAvailable} />
         ) : (
           <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             {error}

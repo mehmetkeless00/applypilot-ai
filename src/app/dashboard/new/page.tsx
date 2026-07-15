@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NewAnalysisForm } from "@/components/analysis/NewAnalysisForm";
+import { billingAvailable } from "@/lib/billing/stripe";
 
 export const metadata = { title: "New analysis" };
 
@@ -20,7 +21,10 @@ export default async function NewAnalysisPage() {
         skills-gap analysis, tailored summary, and cover letter.
       </p>
       <div className="mt-8">
-        <NewAnalysisForm savedResumes={data ?? []} />
+        <NewAnalysisForm
+          savedResumes={data ?? []}
+          billingAvailable={billingAvailable()}
+        />
       </div>
     </div>
   );

@@ -43,6 +43,16 @@ export function missingBillingConfig(
   });
 }
 
+/**
+ * Whether Stripe billing is fully configured and Pro upgrades can be
+ * offered. When false, the UI shows Pro as "Coming soon" and checkout is
+ * refused with a neutral message — the Free plan keeps working. Becomes
+ * true automatically once all billing env vars are set (no code change).
+ */
+export function billingAvailable(): boolean {
+  return missingBillingConfig().length === 0;
+}
+
 /** Throws a BillingConfigError naming (not leaking) unset variables. */
 export function assertBillingConfig(required?: readonly string[]): void {
   const missing = missingBillingConfig(required);

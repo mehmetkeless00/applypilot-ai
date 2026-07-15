@@ -35,6 +35,13 @@ export const PLANS: Record<Plan, PlanInfo> = {
   },
 };
 
+/**
+ * User-facing message when Stripe billing is not configured. Deliberately
+ * neutral — never mention server configuration or env var names.
+ */
+export const PRO_UNAVAILABLE_MESSAGE =
+  "Pro subscriptions are not available yet. The Free plan remains fully usable.";
+
 export function normalizePlan(value: unknown): Plan {
   return value === "pro" ? "pro" : "free";
 }

@@ -3,11 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   assertBillingConfig,
+  billingAvailable,
   BillingConfigError,
   getProPriceId,
   getStripe,
+  missingBillingConfig,
 } from "@/lib/billing/stripe";
-import { normalizePlan } from "@/lib/billing/plans";
+import { normalizePlan, PRO_UNAVAILABLE_MESSAGE } from "@/lib/billing/plans";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -16,6 +18,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  // Env var names go to server logs only; the response stays neutral.
+  if (!billingAvailable()) {
+    console.error(
+      `Checkout refused — billing not configured: set ${missingBillingConfig().join(", ")}`,
+    );
+    return NextResponse.json({ error: PRO_UNAVAILABLE_MESSAGE }, { status: 503 });
   }
 
   const appUrl =
@@ -80,8 +90,8 @@ export async function POST(request: Request) {
     if (err instanceof BillingConfigError) {
       console.error(err.message);
       return NextResponse.json(
-        { error: "Billing is not configured on the server." },
-        { status: 500 },
+        { error: PRO_UNAVAILABLE_MESSAGE },
+        { status: 503 },
       );
     }
     console.error("Checkout error:", err);

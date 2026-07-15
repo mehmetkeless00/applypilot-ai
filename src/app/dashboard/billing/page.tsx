@@ -2,9 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { BillingActionButton } from "@/components/billing/BillingActions";
-import { PlanCard } from "@/components/billing/PlanCards";
+import { ComingSoonAction, PlanCard } from "@/components/billing/PlanCards";
 import { UsageIndicator } from "@/components/billing/UsageIndicator";
 import { PLANS } from "@/lib/billing/plans";
+import { billingAvailable } from "@/lib/billing/stripe";
 import { subscriptionSummary } from "@/lib/billing/status";
 import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
 
@@ -34,6 +35,7 @@ export default async function BillingPage({
 
   const summary = subscriptionSummary(profile);
   const plan = summary.plan;
+  const available = billingAvailable();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -98,11 +100,16 @@ export default async function BillingPage({
         <PlanCard
           plan="pro"
           current={plan === "pro"}
+          comingSoon={!available && plan === "free"}
           action={
             plan === "free" ? (
-              <BillingActionButton endpoint="/api/billing/checkout">
-                Upgrade to Pro — ${PLANS.pro.priceMonthly}/mo
-              </BillingActionButton>
+              available ? (
+                <BillingActionButton endpoint="/api/billing/checkout">
+                  Upgrade to Pro — ${PLANS.pro.priceMonthly}/mo
+                </BillingActionButton>
+              ) : (
+                <ComingSoonAction />
+              )
             ) : (
               <BillingActionButton endpoint="/api/billing/portal" variant="secondary">
                 Manage subscription
@@ -112,10 +119,12 @@ export default async function BillingPage({
         />
       </div>
 
-      <p className="text-xs text-slate-400">
-        Payments are processed by Stripe. Invoices, payment methods, and
-        cancellation are handled in the Stripe billing portal.
-      </p>
+      {(available || plan === "pro") && (
+        <p className="text-xs text-slate-400">
+          Payments are processed by Stripe. Invoices, payment methods, and
+          cancellation are handled in the Stripe billing portal.
+        </p>
+      )}
     </div>
   );
 }
