@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
-import { monthStartUtc } from "@/lib/billing/usage";
+import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
 
 /** Compact monthly-usage indicator for the dashboard header. */
 export async function HeaderUsage() {
@@ -11,17 +11,14 @@ export async function HeaderUsage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [{ data: profile }, { count }] = await Promise.all([
+  const [{ data: profile }, count] = await Promise.all([
     supabase.from("profiles").select("plan").eq("id", user.id).single(),
-    supabase
-      .from("analyses")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", monthStartUtc().toISOString()),
+    countUsageSince(supabase, "analysis", monthStartUtc()),
   ]);
 
   const plan = normalizePlan(profile?.plan);
   const limit = PLANS[plan].analysesPerMonth;
-  const used = Math.min(count ?? 0, limit);
+  const used = Math.min(count, limit);
   const exhausted = used >= limit;
 
   return (

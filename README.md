@@ -87,6 +87,14 @@ Limits reset on UTC calendar months and are enforced in `/api/analyze` (HTTP 402
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 
+## Security notes
+
+- **Usage ledger** — plan limits and rate limits count `usage_events` (append-only, no update/delete RLS policies), not `analyses`, so deleting analyses doesn't refund quota. Migration `0007_usage_ledger.sql` backfills existing analyses.
+- **Rate limits** — analyses 10/hour, imports 20/hour (attempts, not successes), exports 60/hour, all per-account on top of monthly plan limits.
+- **Headers** — HSTS, nosniff, frame denial, referrer and permissions policies on every response; a production-only CSP restricts scripts and network destinations (`next.config.ts`).
+- **Uploads** — PDFs are magic-byte verified server-side before being sent to the model; storage paths are prefix-checked against the session user.
+- **Signup** — disposable-email domains are rejected. For production, also enable CAPTCHA (Supabase **Auth → Attack protection**) and keep Supabase's default auth rate limits on.
+
 ## Deployment (Vercel)
 
 1. Push the repo to GitHub and import it in Vercel.

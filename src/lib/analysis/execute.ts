@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { analyze, AnalysisRefusedError, AIConfigError } from "@/lib/ai/analyze";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
-import { monthStartUtc } from "@/lib/billing/usage";
+import {
+  countUsageSince,
+  hourAgo,
+  monthStartUtc,
+  recordUsage,
+} from "@/lib/billing/usage";
 import { createResumeWithVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
 
 // Shared analysis execution used by POST /api/analyze and the re-score
@@ -46,11 +51,10 @@ export async function executeAnalysis(
     .single();
   const plan = normalizePlan(profile?.plan);
   const monthlyLimit = PLANS[plan].analysesPerMonth;
-  const { count: monthCount } = await supabase
-    .from("analyses")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", monthStartUtc().toISOString());
-  if ((monthCount ?? 0) >= monthlyLimit) {
+  // Usage comes from the append-only ledger, so deleting analyses
+  // doesn't refund quota.
+  const monthCount = await countUsageSince(supabase, "analysis", monthStartUtc());
+  if (monthCount >= monthlyLimit) {
     throw new AnalysisRequestError(
       plan === "free"
         ? `You've used all ${monthlyLimit} free analyses this month. Upgrade to Pro for ${PLANS.pro.analysesPerMonth}/month.`
@@ -60,12 +64,8 @@ export async function executeAnalysis(
   }
 
   // Simple per-user anti-abuse rate limit.
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count } = await supabase
-    .from("analyses")
-    .select("id", { count: "exact", head: true })
-    .gte("created_at", oneHourAgo);
-  if ((count ?? 0) >= ANALYSES_PER_HOUR) {
+  const hourCount = await countUsageSince(supabase, "analysis", hourAgo());
+  if (hourCount >= ANALYSES_PER_HOUR) {
     throw new AnalysisRequestError(
       "Rate limit reached — try again in an hour.",
       429,
@@ -103,7 +103,15 @@ export async function executeAnalysis(
     if (downloadError || !file) {
       throw new AnalysisRequestError("Could not read the uploaded resume", 400);
     }
-    resumePdfBase64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // The bucket's MIME restriction trusts the client; verify the content.
+    if (!bytes.subarray(0, 5).toString("latin1").startsWith("%PDF-")) {
+      throw new AnalysisRequestError(
+        "The uploaded file isn't a valid PDF. Re-upload your resume.",
+        400,
+      );
+    }
+    resumePdfBase64 = bytes.toString("base64");
   }
 
   // Optionally save an inline resume to the library before analyzing.
@@ -164,6 +172,8 @@ export async function executeAnalysis(
       500,
     );
   }
+
+  await recordUsage(supabase, user.id, "analysis");
 
   return { id: row.id };
 }

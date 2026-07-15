@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { countUsageSince, hourAgo, recordUsage } from "@/lib/billing/usage";
 import {
   exportFilename,
   isExportDoc,
@@ -13,6 +14,9 @@ const contentTypes = {
   pdf: "application/pdf",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 } as const;
+
+// Document generation is CPU-bound — cap per-account throughput.
+const EXPORTS_PER_HOUR = 60;
 
 export async function GET(
   request: Request,
@@ -41,6 +45,15 @@ export async function GET(
       { status: 400 },
     );
   }
+
+  const attempts = await countUsageSince(supabase, "export", hourAgo());
+  if (attempts >= EXPORTS_PER_HOUR) {
+    return NextResponse.json(
+      { error: "Export limit reached — try again in an hour." },
+      { status: 429 },
+    );
+  }
+  await recordUsage(supabase, user.id, "export");
 
   // RLS already scopes the query to the caller's rows.
   const { id } = await params;

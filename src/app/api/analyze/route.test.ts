@@ -34,6 +34,19 @@ vi.mock("@/lib/supabase/server", () => ({
           }),
         };
       }
+      if (table === "usage_events") {
+        return {
+          select: () => ({
+            eq: () => ({
+              gte: async () => ({ count: countChain.count }),
+            }),
+          }),
+          insert: (payload: Record<string, unknown>) => {
+            insertPayloads.push(payload);
+            return { error: null };
+          },
+        };
+      }
       if (table === "resume_versions") {
         return {
           select: () => ({

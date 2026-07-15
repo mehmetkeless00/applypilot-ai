@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { countUsageSince, hourAgo, recordUsage } from "@/lib/billing/usage";
 import { importJobFromUrl, JobImportError } from "@/lib/jobimport/providers";
 
 const bodySchema = z.object({
   url: z.string().trim().min(1, "Enter a job posting URL").max(2000),
 });
+
+// The importer makes server-side requests to third-party sites on the
+// user's behalf — cap how fast a single account can drive it.
+const IMPORTS_PER_HOUR = 20;
 
 const kindToStatus: Record<JobImportError["kind"], number> = {
   invalid_url: 400,
@@ -39,6 +44,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const attempts = await countUsageSince(supabase, "import", hourAgo());
+  if (attempts >= IMPORTS_PER_HOUR) {
+    return NextResponse.json(
+      { error: "Import limit reached — try again in an hour, or paste the description." },
+      { status: 429 },
+    );
+  }
+  // Record the attempt (not just successes) so failures can't be hammered.
+  await recordUsage(supabase, user.id, "import");
 
   try {
     const job = await importJobFromUrl(parsed.data.url);

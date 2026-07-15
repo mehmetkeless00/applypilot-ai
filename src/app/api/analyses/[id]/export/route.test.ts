@@ -1,16 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMock, singleMock } = vi.hoisted(() => ({
+const { getUserMock, singleMock, usageChain } = vi.hoisted(() => ({
   getUserMock: vi.fn(),
   singleMock: vi.fn(),
+  usageChain: { count: 0 },
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: getUserMock },
-    from: () => ({
-      select: () => ({ eq: () => ({ single: singleMock }) }),
-    }),
+    from: (table: string) =>
+      table === "usage_events"
+        ? {
+            select: () => ({
+              eq: () => ({ gte: async () => ({ count: usageChain.count }) }),
+            }),
+            insert: () => ({ error: null }),
+          }
+        : {
+            select: () => ({ eq: () => ({ single: singleMock }) }),
+          },
   }),
 }));
 
@@ -62,6 +71,7 @@ const ctx = { params: Promise.resolve({ id: "analysis-1" }) };
 beforeEach(() => {
   getUserMock.mockResolvedValue({ data: { user: { id: "user-123" } } });
   singleMock.mockResolvedValue({ data: analysis, error: null });
+  usageChain.count = 0;
 });
 
 describe("GET /api/analyses/[id]/export", () => {
@@ -79,6 +89,12 @@ describe("GET /api/analyses/[id]/export", () => {
   it("returns 400 for the full report as docx", async () => {
     const res = await GET(makeRequest("?format=docx&doc=full"), ctx);
     expect(res.status).toBe(400);
+  });
+
+  it("returns 429 when the hourly export limit is reached", async () => {
+    usageChain.count = 60;
+    const res = await GET(makeRequest("?format=pdf&doc=summary"), ctx);
+    expect(res.status).toBe(429);
   });
 
   it("returns 404 when the analysis does not exist (or is not the caller's)", async () => {

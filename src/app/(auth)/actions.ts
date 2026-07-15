@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { isDisposableEmail } from "@/lib/auth/disposable";
 
 const credentialsSchema = z.object({
   email: z.email("Enter a valid email address"),
@@ -51,6 +52,12 @@ export async function signUp(
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
+  }
+
+  if (isDisposableEmail(parsed.data.email)) {
+    return {
+      error: "Disposable email addresses aren't supported — use your regular email.",
+    };
   }
 
   const supabase = await createClient();

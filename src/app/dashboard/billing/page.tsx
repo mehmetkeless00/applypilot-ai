@@ -4,7 +4,7 @@ import { BillingActionButton } from "@/components/billing/BillingActions";
 import { PlanCard } from "@/components/billing/PlanCards";
 import { UsageIndicator } from "@/components/billing/UsageIndicator";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
-import { monthStartUtc } from "@/lib/billing/usage";
+import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
 
 export const metadata = { title: "Billing" };
 
@@ -19,20 +19,16 @@ export default async function BillingPage({
   } = await supabase.auth.getUser();
   const { checkout } = await searchParams;
 
-  const [{ data: profile }, { count }] = await Promise.all([
+  const [{ data: profile }, used] = await Promise.all([
     supabase
       .from("profiles")
       .select("plan, subscription_status, stripe_customer_id")
       .eq("id", user!.id)
       .single(),
-    supabase
-      .from("analyses")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", monthStartUtc().toISOString()),
+    countUsageSince(supabase, "analysis", monthStartUtc()),
   ]);
 
   const plan = normalizePlan(profile?.plan);
-  const used = count ?? 0;
   const pastDue = profile?.subscription_status === "past_due";
 
   return (
