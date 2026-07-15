@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { normalizePlan, PLANS, planFromSubscriptionStatus } from "./plans";
+import { missingBillingConfig } from "./stripe";
 import { monthStartUtc } from "./usage";
 
 describe("planFromSubscriptionStatus", () => {
@@ -15,9 +16,34 @@ describe("planFromSubscriptionStatus", () => {
   it("maps terminal and unknown statuses to free", () => {
     expect(planFromSubscriptionStatus("canceled")).toBe("free");
     expect(planFromSubscriptionStatus("unpaid")).toBe("free");
+    expect(planFromSubscriptionStatus("incomplete")).toBe("free");
     expect(planFromSubscriptionStatus("incomplete_expired")).toBe("free");
     expect(planFromSubscriptionStatus("paused")).toBe("free");
     expect(planFromSubscriptionStatus(null)).toBe("free");
+  });
+});
+
+describe("missingBillingConfig", () => {
+  const saved = { ...process.env };
+  afterEach(() => {
+    process.env = { ...saved };
+  });
+
+  it("names unset or placeholder variables without leaking values", () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_your-webhook-secret";
+    process.env.STRIPE_PRO_PRICE_ID = "price_real";
+    process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
+    const missing = missingBillingConfig();
+    expect(missing).toEqual(["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]);
+  });
+
+  it("returns empty when everything is configured", () => {
+    process.env.STRIPE_SECRET_KEY = "sk_test_1";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_1";
+    process.env.STRIPE_PRO_PRICE_ID = "price_1";
+    process.env.NEXT_PUBLIC_APP_URL = "https://applypilot.test";
+    expect(missingBillingConfig()).toEqual([]);
   });
 });
 

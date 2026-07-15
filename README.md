@@ -70,7 +70,49 @@ The "Import from URL" tab fetches a posting server-side. Greenhouse, Lever, Ashb
 | Free | $0 | 3 |
 | Pro | $12/mo | 50 |
 
-The prices shown in the UI come from `src/lib/billing/plans.ts` — keep the **Stripe price** behind `STRIPE_PRO_PRICE_ID` in sync with the displayed $12/month, since Stripe is what actually charges the card.
+The prices shown in the UI come from `src/lib/billing/plans.ts` — keep the **Stripe price** behind `STRIPE_PRO_PRICE_ID` in sync with the displayed $12/month, since Stripe is what actually charges the card. The same `PLANS` config drives both the UI and server-side quota enforcement — limits are never duplicated or trusted from the client.
+
+### Subscription status policy
+
+Plan is always derived server-side from the Stripe-reported status (`planFromSubscriptionStatus` in `plans.ts`):
+
+| Stripe status | Plan | Why |
+|---|---|---|
+| `active`, `trialing` | Pro | Paid or in trial. A cancellation scheduled for period end keeps status `active` with `cancel_at_period_end=true`, so access lasts until the paid period ends. |
+| `past_due` | Pro (grace) | Stripe is retrying the payment; access continues during dunning. |
+| `unpaid`, `canceled` | Free | Payment definitively failed or the subscription ended. |
+| `incomplete`, `incomplete_expired` | Free | The first payment never succeeded. |
+| anything else / null | Free | Fail closed. |
+
+### Stripe setup
+
+1. **Create the product/price**: Stripe Dashboard → **Product catalog → Add product** → name "ApplyPilot Pro", add a **recurring** price of **$12.00 / month**. Copy the price ID (`price_…`) into `STRIPE_PRO_PRICE_ID`.
+2. **Create the webhook endpoint**: **Developers → Webhooks → Add endpoint**, URL `https://<your-domain>/api/stripe/webhook`, subscribed to exactly these events:
+   `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`.
+   Copy the signing secret (`whsec_…`) into `STRIPE_WEBHOOK_SECRET`.
+3. **Env vars** (see `.env.example`): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRO_PRICE_ID`, `NEXT_PUBLIC_APP_URL`. Missing/placeholder values produce clear server-log errors naming the variable (never its value).
+4. **Run migration** `0008_billing_state.sql` (adds subscription-state columns and the `stripe_events` idempotency table).
+
+### Local webhook testing (Stripe CLI)
+
+```bash
+stripe login
+stripe listen --forward-to localhost:3000/api/stripe/webhook   # prints a whsec_… for .env.local
+stripe trigger checkout.session.completed
+stripe trigger customer.subscription.updated
+stripe trigger invoice.payment_failed
+```
+
+Use test-mode card `4242 4242 4242 4242` in Checkout. Webhook processing is idempotent (event IDs recorded in `stripe_events`) and out-of-order safe (writes carry the event timestamp and never overwrite newer state).
+
+### Production billing checklist
+
+- [ ] Live-mode `STRIPE_SECRET_KEY`, `STRIPE_PRO_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` set in Vercel
+- [ ] `NEXT_PUBLIC_APP_URL` = production URL (Stripe redirects + reset emails)
+- [ ] Webhook endpoint created against the production domain with the six events above
+- [ ] Migration `0008_billing_state.sql` applied
+- [ ] Customer portal enabled: Stripe **Settings → Billing → Customer portal** (allow cancel/resume + payment-method updates)
+- [ ] Test a full cycle: upgrade → banner + Pro quota → portal cancel → access ends at period end
 
 Limits reset on UTC calendar months and are enforced in `/api/analyze` (HTTP 402 when exhausted). Upgrades run through Stripe Checkout from `/dashboard/billing`; subscription changes (renewal, cancellation, failed payment, expiry) arrive via the `/api/stripe/webhook` endpoint, which updates `profiles.plan` using the service-role key. A failed payment keeps Pro as a grace period (`past_due`) until Stripe gives up and cancels. Migration `0004_billing.sql` restricts profile updates so users can't set their own `plan` through the REST API.
 

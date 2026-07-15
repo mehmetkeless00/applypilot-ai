@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { Badge } from "@/components/ui/Badge";
 import { Card, CardTitle } from "@/components/ui/Card";
 import { BillingActionButton } from "@/components/billing/BillingActions";
 import { PlanCard } from "@/components/billing/PlanCards";
 import { UsageIndicator } from "@/components/billing/UsageIndicator";
-import { normalizePlan, PLANS } from "@/lib/billing/plans";
+import { PLANS } from "@/lib/billing/plans";
+import { subscriptionSummary } from "@/lib/billing/status";
 import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
 
 export const metadata = { title: "Billing" };
@@ -22,14 +24,16 @@ export default async function BillingPage({
   const [{ data: profile }, used] = await Promise.all([
     supabase
       .from("profiles")
-      .select("plan, subscription_status, stripe_customer_id")
+      .select(
+        "plan, subscription_status, stripe_customer_id, current_period_end, cancel_at_period_end",
+      )
       .eq("id", user!.id)
       .single(),
     countUsageSince(supabase, "analysis", monthStartUtc()),
   ]);
 
-  const plan = normalizePlan(profile?.plan);
-  const pastDue = profile?.subscription_status === "past_due";
+  const summary = subscriptionSummary(profile);
+  const plan = summary.plan;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -47,12 +51,26 @@ export default async function BillingPage({
           Checkout canceled — no charge was made.
         </p>
       )}
-      {pastDue && (
+      {summary.warning && (
         <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
           Your last payment failed. Update your payment method to keep Pro —
           we&apos;ll retry automatically for a few days.
         </p>
       )}
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <CardTitle>Subscription</CardTitle>
+          <Badge tone={summary.warning ? "amber" : plan === "pro" ? "indigo" : "slate"}>
+            {summary.statusLabel}
+          </Badge>
+        </div>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          You&apos;re on the <span className="font-semibold">{PLANS[plan].name}</span>{" "}
+          plan ({PLANS[plan].analysesPerMonth} analyses/month).
+          {summary.detail ? ` ${summary.detail}` : ""}
+        </p>
+      </Card>
 
       <Card>
         <CardTitle>Usage</CardTitle>

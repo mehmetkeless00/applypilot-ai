@@ -6,6 +6,7 @@ const {
   versionChain,
   storageChain,
   insertPayloads,
+  usageInserts,
   insertSingleMock,
   analyzeMock,
 } = vi.hoisted(() => ({
@@ -14,6 +15,7 @@ const {
   versionChain: { version: null as Record<string, unknown> | null },
   storageChain: { bytes: null as Buffer | null },
   insertPayloads: [] as Record<string, unknown>[],
+  usageInserts: [] as Record<string, unknown>[],
   insertSingleMock: vi.fn(),
   analyzeMock: vi.fn(),
 }));
@@ -36,7 +38,10 @@ vi.mock("@/lib/supabase/server", () => ({
           select: () => ({
             eq: () => ({ gte: async () => ({ count: 0 }) }),
           }),
-          insert: () => ({ error: null }),
+          insert: (payload: Record<string, unknown>) => {
+            usageInserts.push(payload);
+            return { error: null };
+          },
         };
       }
       if (table === "resume_versions") {
@@ -117,6 +122,7 @@ beforeEach(() => {
   analysisChain.row = { ...baseAnalysis };
   versionChain.version = null;
   storageChain.bytes = null;
+  usageInserts.length = 0;
   insertPayloads.length = 0;
   insertSingleMock.mockResolvedValue({ data: { id: "analysis-2" }, error: null });
   analyzeMock.mockReset();
@@ -153,6 +159,12 @@ describe("POST /api/analyses/[id]/rescore", () => {
     expect(analyzeMock.mock.calls[0][0].resumeText).toBe("r".repeat(200));
     const insert = insertPayloads.find((p) => "fit_score" in p);
     expect(insert?.rescored_from).toBe("analysis-1");
+  });
+
+  it("consumes monthly quota like any analysis", async () => {
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    expect(usageInserts).toEqual([{ user_id: "user-123", kind: "analysis" }]);
   });
 
   it("uses the latest saved-resume version when linked", async () => {

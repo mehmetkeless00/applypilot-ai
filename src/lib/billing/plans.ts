@@ -40,8 +40,20 @@ export function normalizePlan(value: unknown): Plan {
 }
 
 // Maps a Stripe subscription status to the plan the user should be on.
-// past_due keeps Pro as a grace period while Stripe retries the payment;
-// a final failure arrives as canceled/unpaid and drops the user to free.
+//
+// Policy (server-authoritative — the client can never set plan):
+// - active, trialing        → pro. A subscription canceled at period end
+//   stays status "active" with cancel_at_period_end=true until Stripe
+//   sends customer.subscription.deleted, so access lasts the paid period.
+// - past_due                → pro (grace period). Stripe retries payment
+//   per its dunning schedule; the user keeps access while retries run.
+//   A final failure arrives as canceled/unpaid and downgrades.
+// - unpaid, canceled        → free. Payment definitively failed or the
+//   subscription ended.
+// - incomplete,
+//   incomplete_expired      → free. The first payment never succeeded, so
+//   Pro was never really purchased.
+// - paused / unknown / null → free (fail closed).
 export function planFromSubscriptionStatus(status: string | null): Plan {
   switch (status) {
     case "active":
