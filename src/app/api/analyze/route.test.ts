@@ -1,40 +1,70 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMock, countChain, profileChain, insertSingleMock, analyzeMock } =
-  vi.hoisted(() => ({
-    getUserMock: vi.fn(),
-    countChain: { count: 0 },
-    profileChain: { plan: "free" },
-    insertSingleMock: vi.fn(),
-    analyzeMock: vi.fn(),
-  }));
+const {
+  getUserMock,
+  countChain,
+  profileChain,
+  versionChain,
+  insertSingleMock,
+  insertPayloads,
+  analyzeMock,
+} = vi.hoisted(() => ({
+  getUserMock: vi.fn(),
+  countChain: { count: 0 },
+  profileChain: { plan: "free" },
+  versionChain: { version: null as Record<string, unknown> | null },
+  insertSingleMock: vi.fn(),
+  insertPayloads: [] as Record<string, unknown>[],
+  analyzeMock: vi.fn(),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: getUserMock },
-    from: (table: string) =>
-      table === "profiles"
-        ? {
-            select: () => ({
-              eq: () => ({
-                single: async () => ({
-                  data: { plan: profileChain.plan },
-                  error: null,
+    from: (table: string) => {
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: async () => ({
+                data: { plan: profileChain.plan },
+                error: null,
+              }),
+            }),
+          }),
+        };
+      }
+      if (table === "resume_versions") {
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({
+                limit: () => ({
+                  maybeSingle: async () => ({
+                    data: versionChain.version,
+                    error: null,
+                  }),
                 }),
               }),
             }),
+          }),
+        };
+      }
+      return {
+        select: (cols: string, opts?: { count?: string }) => {
+          if (opts?.count) {
+            return { gte: async () => ({ count: countChain.count }) };
           }
-        : {
-            select: (cols: string, opts?: { count?: string }) => {
-              if (opts?.count) {
-                return { gte: async () => ({ count: countChain.count }) };
-              }
-              return {};
-            },
-            insert: () => ({
-              select: () => ({ single: insertSingleMock }),
-            }),
-          },
+          return {};
+        },
+        insert: (payload: Record<string, unknown>) => {
+          insertPayloads.push(payload);
+          return {
+            select: () => ({ single: insertSingleMock }),
+          };
+        },
+      };
+    },
     storage: {
       from: () => ({
         download: async () => ({
@@ -89,6 +119,8 @@ beforeEach(() => {
   getUserMock.mockResolvedValue({ data: { user } });
   countChain.count = 0;
   profileChain.plan = "free";
+  versionChain.version = null;
+  insertPayloads.length = 0;
   insertSingleMock.mockResolvedValue({ data: { id: "analysis-1" }, error: null });
   analyzeMock.mockReset();
   analyzeMock.mockResolvedValue(analysisResult);
@@ -154,6 +186,43 @@ describe("POST /api/analyze", () => {
     const json = await res.json();
     expect(json.id).toBe("analysis-1");
     expect(analyzeMock).toHaveBeenCalledOnce();
+  });
+
+  it("analyzes against a saved resume's latest version", async () => {
+    versionChain.version = {
+      id: "version-9",
+      resume_id: "resume-1",
+      version: 3,
+      content: "s".repeat(200),
+      file_path: null,
+      source: "paste",
+    };
+    const res = await POST(
+      makeRequest({
+        ...validBody,
+        resumeText: undefined,
+        resumeId: "6f1c1f7e-9dcb-4f2a-8f4e-2b8a1a3d9c10",
+      }),
+    );
+    expect(res.status).toBe(200);
+    const analysisInsert = insertPayloads.find((p) => "fit_score" in p);
+    expect(analysisInsert?.resume_id).toBe(
+      "6f1c1f7e-9dcb-4f2a-8f4e-2b8a1a3d9c10",
+    );
+    expect(analysisInsert?.resume_version_id).toBe("version-9");
+    expect(analyzeMock.mock.calls[0][0].resumeText).toBe("s".repeat(200));
+  });
+
+  it("returns 404 when the saved resume has no versions", async () => {
+    versionChain.version = null;
+    const res = await POST(
+      makeRequest({
+        ...validBody,
+        resumeText: undefined,
+        resumeId: "6f1c1f7e-9dcb-4f2a-8f4e-2b8a1a3d9c10",
+      }),
+    );
+    expect(res.status).toBe(404);
   });
 
   it("maps a refusal to a 422 with a friendly message", async () => {

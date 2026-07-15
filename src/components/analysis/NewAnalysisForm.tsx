@@ -8,10 +8,15 @@ import { Input, Textarea } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/utils";
 
-type ResumeMode = "paste" | "upload";
+type ResumeMode = "saved" | "paste" | "upload";
 type JobMode = "paste" | "import";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
+
+export interface SavedResumeOption {
+  id: string;
+  title: string;
+}
 
 function ModeTabs<T extends string>({
   modes,
@@ -48,9 +53,14 @@ function ModeTabs<T extends string>({
   );
 }
 
-export function NewAnalysisForm() {
+export function NewAnalysisForm({
+  savedResumes = [],
+}: {
+  savedResumes?: SavedResumeOption[];
+}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const hasSavedResumes = savedResumes.length > 0;
 
   const [jobMode, setJobMode] = useState<JobMode>("paste");
   const [jobTitle, setJobTitle] = useState("");
@@ -63,7 +73,14 @@ export function NewAnalysisForm() {
   const [importedFrom, setImportedFrom] = useState<string | null>(null);
   const [importNote, setImportNote] = useState<string | null>(null);
 
-  const [resumeMode, setResumeMode] = useState<ResumeMode>("paste");
+  const [resumeMode, setResumeMode] = useState<ResumeMode>(
+    hasSavedResumes ? "saved" : "paste",
+  );
+  const [selectedResumeId, setSelectedResumeId] = useState(
+    savedResumes[0]?.id ?? "",
+  );
+  const [saveToLibrary, setSaveToLibrary] = useState(false);
+  const [saveTitle, setSaveTitle] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +125,10 @@ export function NewAnalysisForm() {
     const resumeText = String(formData.get("resumeText") ?? "");
     const file = fileInputRef.current?.files?.[0];
 
+    if (resumeMode === "saved" && !selectedResumeId) {
+      setError("Choose a saved resume, or paste your resume text.");
+      return;
+    }
     if (resumeMode === "upload") {
       if (!file) {
         setError("Choose a PDF resume to upload.");
@@ -153,6 +174,11 @@ export function NewAnalysisForm() {
           jobDescription,
           resumeText: resumeMode === "paste" ? resumeText : undefined,
           resumeFilePath,
+          resumeId: resumeMode === "saved" ? selectedResumeId : undefined,
+          saveResumeTitle:
+            resumeMode !== "saved" && saveToLibrary && saveTitle.trim()
+              ? saveTitle.trim()
+              : undefined,
         }),
       });
 
@@ -272,15 +298,37 @@ export function NewAnalysisForm() {
             Your resume
           </span>
           <ModeTabs
-            modes={["paste", "upload"] as const}
-            labels={{ paste: "Paste text", upload: "Upload PDF" }}
+            modes={
+              hasSavedResumes
+                ? (["saved", "paste", "upload"] as const)
+                : (["paste", "upload"] as const)
+            }
+            labels={{ saved: "Saved resume", paste: "Paste text", upload: "Upload PDF" }}
             active={resumeMode}
             onChange={setResumeMode}
             disabled={submitting}
           />
         </div>
 
-        {resumeMode === "paste" ? (
+        {resumeMode === "saved" ? (
+          <div>
+            <select
+              value={selectedResumeId}
+              onChange={(e) => setSelectedResumeId(e.target.value)}
+              disabled={submitting}
+              className="block w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-indigo-600 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
+            >
+              {savedResumes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+              The latest version of this resume will be used.
+            </p>
+          </div>
+        ) : resumeMode === "paste" ? (
           <Textarea
             name="resumeText"
             required
@@ -312,6 +360,32 @@ export function NewAnalysisForm() {
               PDF only, up to 10 MB
             </span>
           </label>
+        )}
+
+        {resumeMode !== "saved" && (
+          <div className="mt-3 space-y-2">
+            <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <input
+                type="checkbox"
+                checked={saveToLibrary}
+                onChange={(e) => setSaveToLibrary(e.target.checked)}
+                disabled={submitting}
+                className="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 dark:border-slate-700"
+              />
+              Save to my resumes for reuse
+            </label>
+            {saveToLibrary && (
+              <Input
+                label="Resume name"
+                value={saveTitle}
+                onChange={(e) => setSaveTitle(e.target.value)}
+                maxLength={120}
+                placeholder="e.g. Backend Engineer resume"
+                disabled={submitting}
+                required
+              />
+            )}
+          </div>
         )}
       </div>
 

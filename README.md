@@ -40,6 +40,10 @@ npm run dev
 
 Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has deprecated it.
 
+## Resume library
+
+Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every edit creates an immutable new version, and each analysis records exactly which resume version it scored (`analyses.resume_id` / `resume_version_id`). The new-analysis form defaults to your saved resume; pasted or uploaded resumes can be saved to the library in the same step. Deleting a resume keeps past analyses intact (links null out). Migration: `0005_resumes.sql`.
+
 ## Job URL import
 
 The "Import from URL" tab fetches a posting server-side. Greenhouse, Lever, Ashby, and Workable use dedicated adapters against their public JSON APIs. Other sites go through a generic pipeline: schema.org `JobPosting` JSON-LD (single objects, arrays, and `@graph`), then Open Graph tags, then semantic HTML extraction — so many, but not all, career pages import. Pages that need JavaScript, a login, or answer with a bot check get a manual-paste message; LinkedIn is always manual-paste. The generic fetcher only requests validated public hosts: http/https only, no private/reserved IPs or internal hostnames (checked lexically **and** after DNS resolution), every redirect re-validated, with a 10s timeout, 5-redirect limit, 2 MB size cap, and HTML/JSON content types only.

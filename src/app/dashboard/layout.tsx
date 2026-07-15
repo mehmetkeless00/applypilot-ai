@@ -37,6 +37,12 @@ export default async function DashboardLayout({
                 New analysis
               </Link>
               <Link
+                href="/dashboard/resumes"
+                className="hover:text-slate-900 dark:hover:text-slate-100"
+              >
+                Resumes
+              </Link>
+              <Link
                 href="/dashboard/billing"
                 className="hover:text-slate-900 dark:hover:text-slate-100"
               >

@@ -21,7 +21,17 @@ export async function deleteAnalysis(formData: FormData) {
   await supabase.from("analyses").delete().eq("id", id);
 
   if (row?.resume_file_path) {
-    await supabase.storage.from("resumes").remove([row.resume_file_path]);
+    // The same file may back a saved resume version — only remove it from
+    // storage when nothing else references it.
+    const { data: sharedVersion } = await supabase
+      .from("resume_versions")
+      .select("id")
+      .eq("file_path", row.resume_file_path)
+      .limit(1)
+      .maybeSingle();
+    if (!sharedVersion) {
+      await supabase.storage.from("resumes").remove([row.resume_file_path]);
+    }
   }
 
   revalidatePath("/dashboard");

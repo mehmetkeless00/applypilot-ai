@@ -5,6 +5,7 @@ import { AnalyzeRequest } from "@/lib/ai/schema";
 import { analyze, AnalysisRefusedError, AIConfigError } from "@/lib/ai/analyze";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
 import { monthStartUtc } from "@/lib/billing/usage";
+import { createResumeWithVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
 
 // Generous headroom for slow model responses; Flash typically answers in seconds.
 export const maxDuration = 300;
@@ -73,16 +74,37 @@ export async function POST(request: Request) {
     );
   }
 
+  // Resolve the resume source: a saved resume's latest version, or the
+  // text/PDF provided inline with the request.
+  let resumeText = input.resumeText;
+  let resumeFilePath = input.resumeFilePath;
+  let resumeId: string | null = null;
+  let resumeVersionId: string | null = null;
+
+  if (input.resumeId) {
+    const version = await fetchLatestVersion(supabase, input.resumeId);
+    if (!version) {
+      return NextResponse.json(
+        { error: "That saved resume wasn't found." },
+        { status: 404 },
+      );
+    }
+    resumeText = version.content ?? undefined;
+    resumeFilePath = version.file_path ?? undefined;
+    resumeId = input.resumeId;
+    resumeVersionId = version.id;
+  }
+
   // When a PDF was uploaded, fetch it from storage (RLS scopes access,
   // but verify the path prefix anyway) and base64-encode for the model.
   let resumePdfBase64: string | undefined;
-  if (input.resumeFilePath) {
-    if (!input.resumeFilePath.startsWith(`${user.id}/`)) {
+  if (resumeFilePath) {
+    if (!resumeFilePath.startsWith(`${user.id}/`)) {
       return NextResponse.json({ error: "Invalid resume file" }, { status: 400 });
     }
     const { data: file, error: downloadError } = await supabase.storage
       .from("resumes")
-      .download(input.resumeFilePath);
+      .download(resumeFilePath);
     if (downloadError || !file) {
       return NextResponse.json(
         { error: "Could not read the uploaded resume" },
@@ -92,12 +114,25 @@ export async function POST(request: Request) {
     resumePdfBase64 = Buffer.from(await file.arrayBuffer()).toString("base64");
   }
 
+  // Optionally save an inline resume to the library before analyzing.
+  if (!input.resumeId && input.saveResumeTitle && (resumeText || resumeFilePath)) {
+    const created = await createResumeWithVersion(supabase, user.id, input.saveResumeTitle, {
+      content: resumeText,
+      filePath: resumeFilePath,
+      source: resumeFilePath ? "pdf" : "paste",
+    });
+    if (created) {
+      resumeId = created.resumeId;
+      resumeVersionId = created.versionId;
+    }
+  }
+
   try {
     const { result, servedBy } = await analyze({
       jobTitle: input.jobTitle,
       company: input.company,
       jobDescription: input.jobDescription,
-      resumeText: input.resumeText,
+      resumeText: resumePdfBase64 ? undefined : resumeText,
       resumePdfBase64,
     });
 
@@ -108,8 +143,10 @@ export async function POST(request: Request) {
         job_title: input.jobTitle,
         company: input.company ?? null,
         job_description: input.jobDescription,
-        resume_text: input.resumeText ?? null,
-        resume_file_path: input.resumeFilePath ?? null,
+        resume_text: resumeText ?? null,
+        resume_file_path: resumeFilePath ?? null,
+        resume_id: resumeId,
+        resume_version_id: resumeVersionId,
         fit_score: result.fit_score,
         fit_summary: result.fit_summary,
         missing_skills: result.missing_skills,

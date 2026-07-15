@@ -30,6 +30,23 @@ describe("AnalyzeRequest", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("accepts a saved-resume request via resumeId", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      resumeText: undefined,
+      resumeId: "6f1c1f7e-9dcb-4f2a-8f4e-2b8a1a3d9c10",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects a non-uuid resumeId", () => {
+    const parsed = AnalyzeRequest.safeParse({
+      ...validRequest,
+      resumeId: "not-a-uuid",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
   it("rejects a too-short job description", () => {
     const parsed = AnalyzeRequest.safeParse({
       ...validRequest,

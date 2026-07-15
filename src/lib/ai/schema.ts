@@ -60,9 +60,13 @@ export const AnalyzeRequest = z
       .max(50_000, "Resume is too long (max 50,000 characters)")
       .optional(),
     resumeFilePath: z.string().trim().max(500).optional(),
+    /** Analyze against the latest version of a saved resume. */
+    resumeId: z.uuid().optional(),
+    /** When resume text/PDF is provided inline, also save it to the library. */
+    saveResumeTitle: z.string().trim().min(1).max(120).optional(),
   })
-  .refine((data) => data.resumeText || data.resumeFilePath, {
-    message: "Provide your resume as text or an uploaded PDF",
+  .refine((data) => data.resumeText || data.resumeFilePath || data.resumeId, {
+    message: "Provide your resume as text, an uploaded PDF, or a saved resume",
     path: ["resumeText"],
   });
 

@@ -31,6 +31,27 @@ export interface ResumeSuggestion {
   impact: SuggestionImpact;
 }
 
+export type ResumeSource = "paste" | "pdf";
+
+export interface Resume {
+  id: string;
+  user_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResumeVersion {
+  id: string;
+  resume_id: string;
+  user_id: string;
+  version: number;
+  content: string | null;
+  file_path: string | null;
+  source: ResumeSource;
+  created_at: string;
+}
+
 export interface Analysis {
   id: string;
   user_id: string;
@@ -49,6 +70,9 @@ export interface Analysis {
   ats_keywords: AtsKeyword[];
   /** Empty for analyses created before rewrite suggestions shipped. */
   resume_suggestions: ResumeSuggestion[];
+  /** Set when the analysis was run against a saved resume. */
+  resume_id: string | null;
+  resume_version_id: string | null;
   model: string;
   created_at: string;
 }

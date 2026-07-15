@@ -1,8 +1,15 @@
+import { createClient } from "@/lib/supabase/server";
 import { NewAnalysisForm } from "@/components/analysis/NewAnalysisForm";
 
 export const metadata = { title: "New analysis" };
 
-export default function NewAnalysisPage() {
+export default async function NewAnalysisPage() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("resumes")
+    .select("id, title")
+    .order("updated_at", { ascending: false });
+
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -13,7 +20,7 @@ export default function NewAnalysisPage() {
         skills-gap analysis, tailored summary, and cover letter.
       </p>
       <div className="mt-8">
-        <NewAnalysisForm />
+        <NewAnalysisForm savedResumes={data ?? []} />
       </div>
     </div>
   );
