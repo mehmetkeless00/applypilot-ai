@@ -40,6 +40,13 @@ npm run dev
 
 Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has deprecated it.
 
+### Optional integrations
+
+- **Google sign-in** — enable the Google provider in Supabase **Auth → Providers** (create OAuth credentials in Google Cloud Console with redirect URL `https://<project-ref>.supabase.co/auth/v1/callback`). The button appears on login/signup and degrades gracefully when the provider is disabled.
+- **Password reset** — works out of the box via Supabase recovery emails; `NEXT_PUBLIC_APP_URL` must be set in production so reset links point at your domain.
+- **Analytics (PostHog)** — set `NEXT_PUBLIC_POSTHOG_KEY` (and optionally `NEXT_PUBLIC_POSTHOG_HOST`). Only pathname-level pageviews are captured; autocapture is off.
+- **Error monitoring (Sentry)** — set `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`. `sendDefaultPii` is off so resume content never rides along in error payloads.
+
 ## Resume library
 
 Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every edit creates an immutable new version, and each analysis records exactly which resume version it scored (`analyses.resume_id` / `resume_version_id`). The new-analysis form defaults to your saved resume; pasted or uploaded resumes can be saved to the library in the same step. Deleting a resume keeps past analyses intact (links null out). Migration: `0005_resumes.sql`.
