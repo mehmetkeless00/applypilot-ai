@@ -366,6 +366,11 @@ export function NewAnalysisForm({
           </label>
         )}
 
+        <p className="mt-2 text-xs text-slate-400">
+          Your resume is private: used only for your analyses, never sold or
+          used to train models.
+        </p>
+
         {resumeMode !== "saved" && (
           <div className="mt-3 space-y-2">
             <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">

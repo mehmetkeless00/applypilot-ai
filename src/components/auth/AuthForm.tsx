@@ -74,6 +74,20 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
           {pending && <Spinner />}
           {isLogin ? "Sign in" : "Sign up"}
         </Button>
+
+        {!isLogin && (
+          <p className="text-xs text-slate-400">
+            By signing up you agree to the{" "}
+            <Link href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" className="underline hover:text-slate-600 dark:hover:text-slate-300">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+        )}
       </form>
 
       <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
