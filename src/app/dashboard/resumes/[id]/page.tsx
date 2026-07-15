@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/Badge";
 import { ResumeEditor } from "@/components/resumes/ResumeEditor";
 import { ResumeTitleForm } from "@/components/resumes/ResumeTitleForm";
 import { DeleteResumeButton } from "@/components/resumes/DeleteResumeButton";
-import { formatDate } from "@/lib/utils";
-import type { Resume, ResumeVersion } from "@/lib/types";
+import { formatDate, scoreTone } from "@/lib/utils";
+import type { Analysis, Resume, ResumeVersion } from "@/lib/types";
+
+const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
 
 export const metadata = { title: "Resume" };
 
@@ -19,19 +21,32 @@ export default async function ResumePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: resumeData }, { data: versionData }] = await Promise.all([
-    supabase.from("resumes").select("*").eq("id", id).single(),
-    supabase
-      .from("resume_versions")
-      .select("*")
-      .eq("resume_id", id)
-      .order("version", { ascending: false }),
-  ]);
+  const [{ data: resumeData }, { data: versionData }, { data: analysisData }] =
+    await Promise.all([
+      supabase.from("resumes").select("*").eq("id", id).single(),
+      supabase
+        .from("resume_versions")
+        .select("*")
+        .eq("resume_id", id)
+        .order("version", { ascending: false }),
+      supabase
+        .from("analyses")
+        .select("id, job_title, company, fit_score, created_at, resume_version_id")
+        .eq("resume_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
 
   if (!resumeData) notFound();
   const resume = resumeData as Resume;
   const versions = (versionData ?? []) as ResumeVersion[];
   const latest = versions[0];
+  const history = (analysisData ?? []) as Array<
+    Pick<Analysis, "id" | "job_title" | "company" | "fit_score" | "created_at"> & {
+      resume_version_id: string | null;
+    }
+  >;
+  const versionNumber = new Map(versions.map((v) => [v.id, v.version]));
 
   return (
     <div className="space-y-6">
@@ -81,6 +96,41 @@ export default async function ResumePage({
           <div className="mt-4">
             <ResumeEditor resumeId={resume.id} initialContent="" />
           </div>
+        </Card>
+      )}
+
+      {history.length > 0 && (
+        <Card>
+          <CardTitle>Score history</CardTitle>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Analyses that used this resume, newest first.
+          </p>
+          <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
+            {history.map((a) => (
+              <li key={a.id}>
+                <Link
+                  href={`/dashboard/analysis/${a.id}`}
+                  className="flex items-center gap-3 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <Badge tone={toneToBadge[scoreTone(a.fit_score)]}>
+                    {a.fit_score}
+                  </Badge>
+                  <span className="min-w-0 flex-1 truncate text-slate-700 dark:text-slate-300">
+                    {a.job_title}
+                    {a.company ? ` · ${a.company}` : ""}
+                  </span>
+                  {a.resume_version_id && versionNumber.has(a.resume_version_id) && (
+                    <span className="shrink-0 text-xs text-slate-400">
+                      v{versionNumber.get(a.resume_version_id)}
+                    </span>
+                  )}
+                  <span className="shrink-0 text-slate-400">
+                    {formatDate(a.created_at)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

@@ -73,6 +73,8 @@ export interface Analysis {
   /** Set when the analysis was run against a saved resume. */
   resume_id: string | null;
   resume_version_id: string | null;
+  /** Set when this analysis re-scored an earlier one. */
+  rescored_from: string | null;
   model: string;
   created_at: string;
 }

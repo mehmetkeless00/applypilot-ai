@@ -8,17 +8,37 @@ export const metadata = { title: "My analyses" };
 
 const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
 
+function StatTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className="mt-0.5 text-xl font-bold text-slate-900 dark:text-slate-100">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("analyses")
-    .select("id, job_title, company, fit_score, created_at")
+    .select("id, job_title, company, fit_score, created_at, rescored_from")
     .order("created_at", { ascending: false });
 
   const analyses = (data ?? []) as Pick<
     Analysis,
-    "id" | "job_title" | "company" | "fit_score" | "created_at"
+    "id" | "job_title" | "company" | "fit_score" | "created_at" | "rescored_from"
   >[];
+
+  const total = analyses.length;
+  const avg = total
+    ? Math.round(analyses.reduce((sum, a) => sum + a.fit_score, 0) / total)
+    : 0;
+  const best = total ? Math.max(...analyses.map((a) => a.fit_score)) : 0;
+  const rescores = analyses.filter((a) => a.rescored_from).length;
 
   return (
     <div>
@@ -33,6 +53,15 @@ export default async function DashboardPage() {
           New analysis
         </Link>
       </div>
+
+      {total > 0 && (
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatTile label="Analyses" value={String(total)} />
+          <StatTile label="Average fit" value={`${avg}/100`} />
+          <StatTile label="Best fit" value={`${best}/100`} />
+          <StatTile label="Re-scores" value={String(rescores)} />
+        </div>
+      )}
 
       {analyses.length === 0 ? (
         <div className="mt-16 text-center">

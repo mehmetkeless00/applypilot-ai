@@ -10,6 +10,8 @@ import { Strengths } from "@/components/analysis/Strengths";
 import { CopyableText } from "@/components/analysis/CopyableText";
 import { DeleteAnalysisButton } from "@/components/analysis/DeleteAnalysisButton";
 import { ExportButtons } from "@/components/analysis/ExportButtons";
+import { RescoreButton } from "@/components/analysis/RescoreButton";
+import { ScoreDelta } from "@/components/analysis/ScoreDelta";
 import { formatDate } from "@/lib/utils";
 import type { Analysis } from "@/lib/types";
 
@@ -32,6 +34,17 @@ export default async function AnalysisPage({
   const analysis = data as Analysis;
   const slug = analysis.job_title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
+  // When this run re-scored an earlier one, fetch it for the delta display.
+  let previous: { id: string; fit_score: number } | null = null;
+  if (analysis.rescored_from) {
+    const { data: prev } = await supabase
+      .from("analyses")
+      .select("id, fit_score")
+      .eq("id", analysis.rescored_from)
+      .maybeSingle();
+    previous = prev ?? null;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -51,6 +64,10 @@ export default async function AnalysisPage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <RescoreButton
+            analysisId={analysis.id}
+            usesSavedResume={Boolean(analysis.resume_id)}
+          />
           <ExportButtons analysisId={analysis.id} doc="full" formats={["pdf"]} />
           <DeleteAnalysisButton id={analysis.id} />
         </div>
@@ -60,6 +77,13 @@ export default async function AnalysisPage({
         <ScoreGauge score={analysis.fit_score} />
         <div>
           <CardTitle>Fit assessment</CardTitle>
+          {previous && (
+            <ScoreDelta
+              previousId={previous.id}
+              previousScore={previous.fit_score}
+              currentScore={analysis.fit_score}
+            />
+          )}
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {analysis.fit_summary}
           </p>
