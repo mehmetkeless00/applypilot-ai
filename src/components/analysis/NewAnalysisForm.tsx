@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { UpgradeCard } from "@/components/billing/UpgradeCard";
+import { getMessages, LOCALES, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ResumeMode = "saved" | "paste" | "upload";
@@ -57,13 +58,19 @@ function ModeTabs<T extends string>({
 export function NewAnalysisForm({
   savedResumes = [],
   billingAvailable = true,
+  locale = "en",
 }: {
   savedResumes?: SavedResumeOption[];
   billingAvailable?: boolean;
+  locale?: Locale;
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const hasSavedResumes = savedResumes.length > 0;
+  const t = getMessages(locale).newAnalysis;
+  // AI output language defaults to the UI language; the user can override
+  // it per analysis.
+  const [outputLanguage, setOutputLanguage] = useState<Locale>(locale);
 
   const [jobMode, setJobMode] = useState<JobMode>("paste");
   const [jobTitle, setJobTitle] = useState("");
@@ -100,7 +107,7 @@ export function NewAnalysisForm({
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(payload?.error ?? "Import failed. Try pasting manually.");
+        throw new Error(payload?.error ?? t.errors.importFailed);
       }
       setJobTitle(payload.jobTitle ?? "");
       setCompany(payload.company ?? "");
@@ -113,9 +120,7 @@ export function NewAnalysisForm({
       setImportNote(payload.note ?? null);
       setJobMode("paste"); // show the imported text so the user can review/edit
     } catch (err) {
-      setImportError(
-        err instanceof Error ? err.message : "Import failed. Try pasting manually.",
-      );
+      setImportError(err instanceof Error ? err.message : t.errors.importFailed);
     } finally {
       setImporting(false);
     }
@@ -131,20 +136,20 @@ export function NewAnalysisForm({
     const file = fileInputRef.current?.files?.[0];
 
     if (resumeMode === "saved" && !selectedResumeId) {
-      setError("Choose a saved resume, or paste your resume text.");
+      setError(t.errors.chooseSaved);
       return;
     }
     if (resumeMode === "upload") {
       if (!file) {
-        setError("Choose a PDF resume to upload.");
+        setError(t.errors.choosePdfFile);
         return;
       }
       if (file.type !== "application/pdf") {
-        setError("The resume must be a PDF file.");
+        setError(t.errors.mustBePdf);
         return;
       }
       if (file.size > MAX_PDF_BYTES) {
-        setError("The PDF is too large (max 10 MB).");
+        setError(t.errors.pdfTooLarge);
         return;
       }
     }
@@ -158,14 +163,14 @@ export function NewAnalysisForm({
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) throw new Error("Your session expired — sign in again.");
+        if (!user) throw new Error(t.errors.sessionExpired);
 
         const path = `${user.id}/${crypto.randomUUID()}.pdf`;
         const { error: uploadError } = await supabase.storage
           .from("resumes")
           .upload(path, file, { contentType: "application/pdf" });
         if (uploadError) {
-          throw new Error("Could not upload the PDF. Try again.");
+          throw new Error(t.errors.uploadFailed);
         }
         resumeFilePath = path;
       }
@@ -184,18 +189,19 @@ export function NewAnalysisForm({
             resumeMode !== "saved" && saveToLibrary && saveTitle.trim()
               ? saveTitle.trim()
               : undefined,
+          outputLanguage,
         }),
       });
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
         setLimitReached(response.status === 402);
-        throw new Error(payload?.error ?? "Analysis failed. Try again.");
+        throw new Error(payload?.error ?? t.errors.analysisFailed);
       }
 
       router.push(`/dashboard/analysis/${payload.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(err instanceof Error ? err.message : t.errors.generic);
       setSubmitting(false);
     }
   }
@@ -204,21 +210,21 @@ export function NewAnalysisForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
-          label="Job title"
+          label={t.jobTitle}
           name="jobTitle"
           required
           minLength={2}
           maxLength={200}
-          placeholder="Senior Frontend Engineer"
+          placeholder={t.jobTitlePlaceholder}
           disabled={submitting}
           value={jobTitle}
           onChange={(e) => setJobTitle(e.target.value)}
         />
         <Input
-          label="Company (optional)"
+          label={t.company}
           name="company"
           maxLength={200}
-          placeholder="Acme Inc."
+          placeholder={t.companyPlaceholder}
           disabled={submitting}
           value={company}
           onChange={(e) => setCompany(e.target.value)}
@@ -228,11 +234,11 @@ export function NewAnalysisForm({
       <div>
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Job description
+            {t.jobDescription}
           </span>
           <ModeTabs
             modes={["paste", "import"] as const}
-            labels={{ paste: "Paste job description", import: "Import from URL" }}
+            labels={{ paste: t.tabPasteJob, import: t.tabImport }}
             active={jobMode}
             onChange={setJobMode}
             disabled={submitting || importing}
@@ -242,7 +248,7 @@ export function NewAnalysisForm({
         {jobMode === "import" ? (
           <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800">
             <Input
-              label="Job posting URL"
+              label={t.importUrlLabel}
               type="url"
               placeholder="https://boards.greenhouse.io/company/jobs/123456"
               value={importUrl}
@@ -250,9 +256,7 @@ export function NewAnalysisForm({
               disabled={importing}
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-              Works best with Greenhouse, Lever, Ashby, and Workable; many
-              other job pages import too, but not all. For LinkedIn, copy the
-              posting text and use the Paste tab.
+              {t.importHint}
             </p>
             {importError && (
               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -267,14 +271,14 @@ export function NewAnalysisForm({
               disabled={importing || !importUrl.trim()}
             >
               {importing && <Spinner />}
-              {importing ? "Importing…" : "Import job posting"}
+              {importing ? t.importing : t.importButton}
             </Button>
           </div>
         ) : (
           <>
             {importedFrom && (
               <p className="mb-1.5 text-xs text-green-700 dark:text-green-400">
-                Imported from {importedFrom} — review and edit below.
+                {t.importedFrom(importedFrom)}
                 {importNote && (
                   <span className="text-amber-700 dark:text-amber-400">
                     {" "}
@@ -289,7 +293,7 @@ export function NewAnalysisForm({
               minLength={100}
               maxLength={50000}
               rows={10}
-              placeholder="Paste the full job description here…"
+              placeholder={t.jobDescriptionPlaceholder}
               disabled={submitting}
               value={jobDescription}
               onChange={(e) => setJobDescription(e.target.value)}
@@ -301,7 +305,7 @@ export function NewAnalysisForm({
       <div>
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Your resume
+            {t.yourResume}
           </span>
           <ModeTabs
             modes={
@@ -309,7 +313,7 @@ export function NewAnalysisForm({
                 ? (["saved", "paste", "upload"] as const)
                 : (["paste", "upload"] as const)
             }
-            labels={{ saved: "Saved resume", paste: "Paste text", upload: "Upload PDF" }}
+            labels={{ saved: t.tabSaved, paste: t.tabPaste, upload: t.tabUpload }}
             active={resumeMode}
             onChange={setResumeMode}
             disabled={submitting}
@@ -331,7 +335,7 @@ export function NewAnalysisForm({
               ))}
             </select>
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-              The latest version of this resume will be used.
+              {t.savedResumeHint}
             </p>
           </div>
         ) : resumeMode === "paste" ? (
@@ -341,7 +345,7 @@ export function NewAnalysisForm({
             minLength={100}
             maxLength={50000}
             rows={10}
-            placeholder="Paste your resume text here…"
+            placeholder={t.resumePlaceholder}
             disabled={submitting}
           />
         ) : (
@@ -360,18 +364,15 @@ export function NewAnalysisForm({
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
             <span className="text-sm font-semibold text-indigo-600">
-              {fileName ?? "Choose a PDF resume"}
+              {fileName ?? t.choosePdf}
             </span>
             <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              PDF only, up to 10 MB
+              {t.pdfLimits}
             </span>
           </label>
         )}
 
-        <p className="mt-2 text-xs text-slate-400">
-          Your resume is private: used only for your analyses, never sold or
-          used to train models.
-        </p>
+        <p className="mt-2 text-xs text-slate-400">{t.privacyNote}</p>
 
         {resumeMode !== "saved" && (
           <div className="mt-3 space-y-2">
@@ -383,15 +384,15 @@ export function NewAnalysisForm({
                 disabled={submitting}
                 className="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 dark:border-slate-700"
               />
-              Save to my resumes for reuse
+              {t.saveToLibrary}
             </label>
             {saveToLibrary && (
               <Input
-                label="Resume name"
+                label={t.resumeName}
                 value={saveTitle}
                 onChange={(e) => setSaveTitle(e.target.value)}
                 maxLength={120}
-                placeholder="e.g. Backend Engineer resume"
+                placeholder={t.resumeNamePlaceholder}
                 disabled={submitting}
                 required
               />
@@ -400,9 +401,35 @@ export function NewAnalysisForm({
         )}
       </div>
 
+      <div className="max-w-xs">
+        <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+          {t.outputLanguage}
+          <select
+            name="outputLanguage"
+            value={outputLanguage}
+            onChange={(e) => setOutputLanguage(e.target.value === "tr" ? "tr" : "en")}
+            disabled={submitting}
+            className="block w-full rounded-lg border-0 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-indigo-600 dark:bg-slate-900 dark:text-slate-100 dark:ring-slate-700"
+          >
+            {LOCALES.map((l) => (
+              <option key={l} value={l}>
+                {t.languageNames[l]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          {t.outputLanguageHint}
+        </p>
+      </div>
+
       {error &&
         (limitReached ? (
-          <UpgradeCard message={error} billingAvailable={billingAvailable} />
+          <UpgradeCard
+            message={error}
+            billingAvailable={billingAvailable}
+            locale={locale}
+          />
         ) : (
           <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             {error}
@@ -412,11 +439,11 @@ export function NewAnalysisForm({
       <div className="flex items-center gap-4">
         <Button type="submit" disabled={submitting}>
           {submitting && <Spinner />}
-          {submitting ? "Analyzing…" : "Analyze application"}
+          {submitting ? t.submitting : t.submit}
         </Button>
         {submitting && (
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Analysis in progress — this usually takes under a minute.
+            {t.progressNote}
           </p>
         )}
       </div>

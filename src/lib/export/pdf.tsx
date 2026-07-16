@@ -7,7 +7,14 @@ import {
   renderToBuffer,
 } from "@react-pdf/renderer";
 import type { Analysis } from "@/lib/types";
-import { docBody, docTitles, paragraphs, type ExportDoc } from "./content";
+import {
+  docBody,
+  exportLanguage,
+  exportStrings,
+  paragraphs,
+  type ExportDoc,
+  type ExportStrings,
+} from "./content";
 
 const styles = StyleSheet.create({
   page: {
@@ -60,32 +67,36 @@ function Paragraphs({ text }: { text: string }) {
 function SingleDocPdf({
   analysis,
   doc,
+  t,
 }: {
   analysis: Analysis;
   doc: "summary" | "cover_letter";
+  t: ExportStrings;
 }) {
   return (
-    <Document title={docTitles[doc]}>
+    <Document title={t.docTitles[doc]}>
       <Page size="A4" style={styles.page}>
-        <Header analysis={analysis} title={docTitles[doc]} />
+        <Header analysis={analysis} title={t.docTitles[doc]} />
         <Paragraphs text={docBody(analysis, doc)} />
       </Page>
     </Document>
   );
 }
 
-function FullReportPdf({ analysis }: { analysis: Analysis }) {
+function FullReportPdf({ analysis, t }: { analysis: Analysis; t: ExportStrings }) {
   const atsKeywords = analysis.ats_keywords ?? [];
   const suggestions = analysis.resume_suggestions ?? [];
+  const label = (key: string, map: Record<string, string>) =>
+    map[key] ?? key.replace(/_/g, " ");
   return (
-    <Document title={docTitles.full}>
+    <Document title={t.docTitles.full}>
       <Page size="A4" style={styles.page}>
-        <Header analysis={analysis} title={docTitles.full} />
+        <Header analysis={analysis} title={t.docTitles.full} />
 
         <Text style={styles.score}>{analysis.fit_score}/100</Text>
         <Paragraphs text={analysis.fit_summary} />
 
-        <Text style={styles.heading}>Strengths</Text>
+        <Text style={styles.heading}>{t.strengths}</Text>
         {analysis.strengths.map((s, i) => (
           <View key={i} style={styles.item}>
             <Text style={styles.itemTitle}>{s.strength}</Text>
@@ -93,11 +104,12 @@ function FullReportPdf({ analysis }: { analysis: Analysis }) {
           </View>
         ))}
 
-        <Text style={styles.heading}>Missing skills</Text>
+        <Text style={styles.heading}>{t.missingSkills}</Text>
         {analysis.missing_skills.map((s, i) => (
           <View key={i} style={styles.item}>
             <Text style={styles.itemTitle}>
-              {s.skill} <Text style={styles.meta}>({s.importance.replace(/_/g, " ")})</Text>
+              {s.skill}{" "}
+              <Text style={styles.meta}>({label(s.importance, t.importance)})</Text>
             </Text>
             <Text>{s.suggestion}</Text>
           </View>
@@ -105,13 +117,13 @@ function FullReportPdf({ analysis }: { analysis: Analysis }) {
 
         {atsKeywords.length > 0 && (
           <View>
-            <Text style={styles.heading}>ATS keyword coverage</Text>
+            <Text style={styles.heading}>{t.atsCoverage}</Text>
             {atsKeywords.map((k, i) => (
               <View key={i} style={styles.item}>
                 <Text style={styles.itemTitle}>
                   {k.keyword}{" "}
                   <Text style={styles.meta}>
-                    ({k.status}, {k.importance.replace(/_/g, " ")})
+                    ({label(k.status, t.status)}, {label(k.importance, t.importance)})
                   </Text>
                 </Text>
                 <Text>{k.suggestion}</Text>
@@ -122,24 +134,28 @@ function FullReportPdf({ analysis }: { analysis: Analysis }) {
 
         {suggestions.length > 0 && (
           <View>
-            <Text style={styles.heading}>Resume improvement suggestions</Text>
+            <Text style={styles.heading}>{t.suggestions}</Text>
             {suggestions.map((s, i) => (
               <View key={i} style={styles.item}>
                 <Text style={styles.itemTitle}>
-                  {s.section} <Text style={styles.meta}>({s.impact} impact)</Text>
+                  {s.section} <Text style={styles.meta}>({t.impact(s.impact)})</Text>
                 </Text>
-                <Text style={styles.meta}>Current: {s.original_text}</Text>
-                <Text>Improved: {s.improved_text}</Text>
+                <Text style={styles.meta}>
+                  {t.current}: {s.original_text}
+                </Text>
+                <Text>
+                  {t.improved}: {s.improved_text}
+                </Text>
                 <Text style={styles.meta}>{s.reason}</Text>
               </View>
             ))}
           </View>
         )}
 
-        <Text style={styles.heading}>Tailored professional summary</Text>
+        <Text style={styles.heading}>{t.summary}</Text>
         <Paragraphs text={docBody(analysis, "summary")} />
 
-        <Text style={styles.heading}>Cover letter</Text>
+        <Text style={styles.heading}>{t.coverLetter}</Text>
         <Paragraphs text={docBody(analysis, "cover_letter")} />
       </Page>
     </Document>
@@ -150,11 +166,12 @@ export async function analysisPdfBuffer(
   analysis: Analysis,
   doc: ExportDoc,
 ): Promise<Buffer> {
+  const t = exportStrings(exportLanguage(analysis));
   const element =
     doc === "full" ? (
-      <FullReportPdf analysis={analysis} />
+      <FullReportPdf analysis={analysis} t={t} />
     ) : (
-      <SingleDocPdf analysis={analysis} doc={doc} />
+      <SingleDocPdf analysis={analysis} doc={doc} t={t} />
     );
   return Buffer.from(await renderToBuffer(element));
 }

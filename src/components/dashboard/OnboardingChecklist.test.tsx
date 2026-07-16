@@ -55,6 +55,16 @@ describe("OnboardingChecklist", () => {
     expect(html).toContain('href="/dashboard/new"');
   });
 
+  it("renders fully in Turkish when the locale is tr", () => {
+    const html = renderToStaticMarkup(
+      <OnboardingChecklist hasResume={false} locale="tr" />,
+    );
+    expect(html).toContain("İlk uyum raporunuzu alın");
+    expect(html).toContain("CV&#x27;nizi ekleyin");
+    expect(html).toContain("İlan analiz et");
+    expect(html).not.toContain("Add your resume");
+  });
+
   it("uses accessible landmark, heading, and list semantics", () => {
     const html = renderToStaticMarkup(<OnboardingChecklist hasResume={false} />);
     expect(html).toContain('aria-labelledby="onboarding-title"');

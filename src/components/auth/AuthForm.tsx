@@ -7,19 +7,22 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 interface AuthFormProps {
   mode: "login" | "signup";
   action: (prev: AuthState, formData: FormData) => Promise<AuthState>;
   next?: string;
   message?: string;
+  locale?: Locale;
 }
 
-export function AuthForm({ mode, action, next, message }: AuthFormProps) {
+export function AuthForm({ mode, action, next, message, locale = "en" }: AuthFormProps) {
   const [state, formAction, pending] = useActionState(action, null);
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [oauthPending, setOauthPending] = useState(false);
   const isLogin = mode === "login";
+  const t = getMessages(locale).auth;
 
   async function signInWithGoogle() {
     setOauthError(null);
@@ -33,7 +36,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
       options: { redirectTo },
     });
     if (error) {
-      setOauthError("Google sign-in isn't available right now. Use email instead.");
+      setOauthError(t.googleUnavailable);
       setOauthPending(false);
     }
     // On success the browser navigates away to Google.
@@ -42,17 +45,15 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
   return (
     <div className="w-full max-w-sm">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        {isLogin ? "Welcome back" : "Create your account"}
+        {isLogin ? t.welcomeBack : t.createAccount}
       </h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        {isLogin
-          ? "Sign in to your ApplyPilot AI account"
-          : "Start tailoring your job applications with AI"}
+        {isLogin ? t.signInSubtitle : t.signUpSubtitle}
       </p>
 
       {message === "check-email" && (
         <div className="mt-4 rounded-lg bg-green-50 p-3 text-sm text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400">
-          Check your email to confirm your account, then sign in.
+          {t.checkEmail}
         </div>
       )}
 
@@ -83,7 +84,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
               d="M12 4.6c2.2 0 3.7 1 4.6 1.8l3.3-3.3C17.9 1.2 15.2 0 12 0 7.4 0 3.4 2.7 1.5 6.5l3.8 3c.9-2.9 3.6-5 6.7-5"
             />
           </svg>
-          Continue with Google
+          {t.continueWithGoogle}
         </Button>
         {oauthError && (
           <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
@@ -92,7 +93,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
         )}
         <div className="mt-5 flex items-center gap-3 text-xs text-slate-400">
           <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-          or with email
+          {t.orWithEmail}
           <span className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
         </div>
       </div>
@@ -101,7 +102,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
         {next && <input type="hidden" name="next" value={next} />}
         {!isLogin && (
           <Input
-            label="Full name"
+            label={t.fullName}
             name="fullName"
             autoComplete="name"
             required
@@ -109,7 +110,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
           />
         )}
         <Input
-          label="Email"
+          label={t.email}
           name="email"
           type="email"
           autoComplete="email"
@@ -117,7 +118,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
           placeholder="you@example.com"
         />
         <Input
-          label="Password"
+          label={t.password}
           name="password"
           type="password"
           autoComplete={isLogin ? "current-password" : "new-password"}
@@ -132,7 +133,7 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
               href="/forgot-password"
               className="font-medium text-indigo-600 hover:text-indigo-500"
             >
-              Forgot password?
+              {t.forgotPassword}
             </Link>
           </p>
         )}
@@ -145,18 +146,18 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
 
         <Button type="submit" disabled={pending} className="w-full">
           {pending && <Spinner />}
-          {isLogin ? "Sign in" : "Sign up"}
+          {isLogin ? t.signIn : t.signUp}
         </Button>
 
         {!isLogin && (
           <p className="text-xs text-slate-400">
-            By signing up you agree to the{" "}
+            {t.agreeStart}{" "}
             <Link href="/terms" className="underline hover:text-slate-600 dark:hover:text-slate-300">
-              Terms
+              {t.terms}
             </Link>{" "}
-            and{" "}
+            {t.and}{" "}
             <Link href="/privacy" className="underline hover:text-slate-600 dark:hover:text-slate-300">
-              Privacy Policy
+              {t.privacyPolicy}
             </Link>
             .
           </p>
@@ -166,16 +167,16 @@ export function AuthForm({ mode, action, next, message }: AuthFormProps) {
       <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
         {isLogin ? (
           <>
-            No account?{" "}
+            {t.noAccount}{" "}
             <Link href="/signup" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Sign up
+              {t.signUp}
             </Link>
           </>
         ) : (
           <>
-            Already have an account?{" "}
+            {t.haveAccount}{" "}
             <Link href="/login" className="font-semibold text-indigo-600 hover:text-indigo-500">
-              Sign in
+              {t.signIn}
             </Link>
           </>
         )}

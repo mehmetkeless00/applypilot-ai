@@ -24,6 +24,15 @@ const FORBIDDEN_PHRASES = [
   "(corrected",
   "(estimated",
   "(inferred",
+  // Turkish equivalents — the guard applies in both output languages.
+  "varsayılan tarih",
+  "tahmini tarih",
+  "düzeltilmiş tarih",
+  "tarih düzeltildi",
+  "tarih varsayıldı",
+  "(varsayıldı",
+  "(tahmini",
+  "(düzeltildi",
 ];
 
 export function containsForbiddenPhrase(text: string): boolean {
@@ -82,7 +91,10 @@ function unsupportedProperNouns(text: string, corpusWords: Set<string>): string[
     if (/(^|[.!?:;\n•("“'-]\s*)$/.test(before) || before.trim() === "") continue;
     const lower = word.toLowerCase().replace(/['.]+$/g, "");
     if (CAPITALIZED_ALLOWLIST.has(lower)) continue;
-    if (!corpusWords.has(lower)) found.push(word);
+    // Turkish attaches case suffixes to proper nouns with an apostrophe
+    // ("Google'da çalıştı") — the base name is the fact being checked.
+    const base = lower.split("'")[0];
+    if (!corpusWords.has(lower) && !corpusWords.has(base)) found.push(word);
   }
   return [...new Set(found)];
 }

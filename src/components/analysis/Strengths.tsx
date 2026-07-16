@@ -1,13 +1,21 @@
 import { Card, CardTitle } from "@/components/ui/Card";
+import { getMessages, type Locale } from "@/lib/i18n";
 import type { Strength } from "@/lib/types";
 
-export function Strengths({ strengths }: { strengths: Strength[] }) {
+export function Strengths({
+  strengths,
+  locale = "en",
+}: {
+  strengths: Strength[];
+  locale?: Locale;
+}) {
+  const t = getMessages(locale).analysis;
   return (
     <Card>
-      <CardTitle>Your strengths for this role</CardTitle>
+      <CardTitle>{t.strengthsTitle}</CardTitle>
       {strengths.length === 0 ? (
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          No clear matches were found between your resume and this role.
+          {t.strengthsEmpty}
         </p>
       ) : (
         <ul className="mt-4 space-y-4">

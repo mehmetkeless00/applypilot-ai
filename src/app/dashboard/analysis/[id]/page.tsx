@@ -17,6 +17,8 @@ import {
 } from "@/components/analysis/ScoreComparison";
 import { formatDate } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import type { Analysis, AtsKeyword } from "@/lib/types";
 
 export const metadata = { title: "Analysis" };
@@ -35,6 +37,8 @@ export default async function AnalysisPage({
     .single();
 
   if (!data) notFound();
+  const locale = await getLocale();
+  const t = getMessages(locale);
   // Decode legacy entity-encoded metadata for display.
   const analysis = decodeAnalysisMetadata(data as Analysis);
   const slug = analysis.job_title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -91,30 +95,36 @@ export default async function AnalysisPage({
             href="/dashboard"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
           >
-            ← All analyses
+            {t.analysis.back}
           </Link>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {analysis.job_title}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {analysis.company || "Company not specified"} ·{" "}
-            {formatDate(analysis.created_at)}
+            {analysis.company || t.dashboard.companyUnknown} ·{" "}
+            {formatDate(analysis.created_at, locale)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <RescoreButton
             analysisId={analysis.id}
             usesSavedResume={Boolean(analysis.resume_id)}
+            locale={locale}
           />
-          <ExportButtons analysisId={analysis.id} doc="full" formats={["pdf"]} />
-          <DeleteAnalysisButton id={analysis.id} />
+          <ExportButtons
+            analysisId={analysis.id}
+            doc="full"
+            formats={["pdf"]}
+            locale={locale}
+          />
+          <DeleteAnalysisButton id={analysis.id} locale={locale} />
         </div>
       </div>
 
       <Card className="flex flex-col items-center gap-6 sm:flex-row">
-        <ScoreGauge score={analysis.fit_score} />
+        <ScoreGauge score={analysis.fit_score} locale={locale} />
         <div>
-          <CardTitle>Fit assessment</CardTitle>
+          <CardTitle>{t.analysis.fitAssessment}</CardTitle>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {analysis.fit_summary}
           </p>
@@ -125,47 +135,57 @@ export default async function AnalysisPage({
         <ScoreComparison
           previous={comparison.previous}
           current={comparison.current}
+          locale={locale}
         />
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Strengths strengths={analysis.strengths} />
-        <MissingSkills skills={analysis.missing_skills} />
+        <Strengths strengths={analysis.strengths} locale={locale} />
+        <MissingSkills skills={analysis.missing_skills} locale={locale} />
       </div>
 
-      <AtsCoverage keywords={analysis.ats_keywords ?? []} />
+      <AtsCoverage keywords={analysis.ats_keywords ?? []} locale={locale} />
 
       <ResumeSuggestions
         suggestions={analysis.resume_suggestions ?? []}
         analysisId={analysis.id}
         hasSavedResume={Boolean(analysis.resume_id)}
+        locale={locale}
       />
 
       <Card>
-        <CardTitle>Tailored professional summary</CardTitle>
+        <CardTitle>{t.analysis.summaryTitle}</CardTitle>
         <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">
           {analysis.tailored_summary}
         </p>
         <CopyableText
           text={analysis.tailored_summary}
           filename={`summary-${slug}.txt`}
+          locale={locale}
         />
-        <ExportButtons analysisId={analysis.id} doc="summary" className="mt-2" />
+        <ExportButtons
+          analysisId={analysis.id}
+          doc="summary"
+          className="mt-2"
+          locale={locale}
+        />
       </Card>
 
       <Card>
-        <CardTitle>Cover letter</CardTitle>
+        <CardTitle>{t.analysis.coverLetterTitle}</CardTitle>
         <div className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">
           {analysis.cover_letter}
         </div>
         <CopyableText
           text={analysis.cover_letter}
           filename={`cover-letter-${slug}.md`}
+          locale={locale}
         />
         <ExportButtons
           analysisId={analysis.id}
           doc="cover_letter"
           className="mt-2"
+          locale={locale}
         />
       </Card>
     </div>

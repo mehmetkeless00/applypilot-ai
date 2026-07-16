@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NewResumeForm } from "@/components/resumes/NewResumeForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import type { Resume } from "@/lib/types";
 
 export const metadata = { title: "My resumes" };
@@ -19,24 +21,25 @@ export default async function ResumesPage() {
     .order("updated_at", { ascending: false });
 
   const resumes = (data ?? []) as ResumeListRow[];
+  const locale = await getLocale();
+  const t = getMessages(locale).resumes;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          My resumes
+          {t.title}
         </h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          Save your resume once and reuse it across analyses. Every edit is
-          kept as a version, so you can track what improved your scores.
+          {t.subtitle}
         </p>
       </div>
 
       {resumes.length === 0 && (
         <EmptyState
-          title="No resumes yet"
-          description="Saved resumes are versioned — every edit becomes a new version you can re-score, so you can watch your fit improve as you refine it."
-          cta={{ href: "#add-resume", label: "Add your first resume" }}
+          title={t.emptyTitle}
+          description={t.emptyDescription}
+          cta={{ href: "#add-resume", label: t.emptyCta }}
         />
       )}
 
@@ -55,11 +58,11 @@ export default async function ResumesPage() {
                       {resume.title}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {versions} {versions === 1 ? "version" : "versions"}
+                      {t.versions(versions)}
                     </p>
                   </div>
                   <span className="shrink-0 text-sm text-slate-400">
-                    Updated {formatDate(resume.updated_at)}
+                    {t.updatedOn(formatDate(resume.updated_at, locale))}
                   </span>
                 </Link>
               </li>
@@ -70,10 +73,10 @@ export default async function ResumesPage() {
 
       <div id="add-resume" className="max-w-2xl scroll-mt-6">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          {resumes.length === 0 ? "Add your first resume" : "Add another resume"}
+          {resumes.length === 0 ? t.addFirst : t.addAnother}
         </h2>
         <div className="mt-4">
-          <NewResumeForm />
+          <NewResumeForm locale={locale} />
         </div>
       </div>
     </div>

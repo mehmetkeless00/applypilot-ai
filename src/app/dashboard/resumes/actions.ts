@@ -9,33 +9,37 @@ import {
   createResumeWithVersion,
   loadPdfForResume,
 } from "@/lib/resumes/resumes";
+import { getMessages, type Messages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export type ResumeActionState = { error: string } | null;
 
-const contentSchema = z
-  .string()
-  .trim()
-  .min(100, "Paste your full resume (at least 100 characters)")
-  .max(50_000, "Resume is too long (max 50,000 characters)");
+const contentSchema = (t: Messages) =>
+  z
+    .string()
+    .trim()
+    .min(100, t.errors.resumeActions.contentMin)
+    .max(50_000, t.errors.resumeActions.contentMax);
 
-const titleSchema = z.string().trim().min(1, "Give the resume a name").max(120);
+const titleSchema = (t: Messages) =>
+  z.string().trim().min(1, t.errors.resumeActions.nameRequired).max(120);
 
 async function requireUser() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return { supabase, user };
+  return { supabase, user, t: getMessages(await getLocale()) };
 }
 
 export async function createResume(
   _prev: ResumeActionState,
   formData: FormData,
 ): Promise<ResumeActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Your session expired — sign in again." };
+  const { supabase, user, t } = await requireUser();
+  if (!user) return { error: t.newAnalysis.errors.sessionExpired };
 
-  const title = titleSchema.safeParse(formData.get("title"));
+  const title = titleSchema(t).safeParse(formData.get("title"));
   if (!title.success) return { error: title.error.issues[0].message };
 
   // PDF uploads are stored by the client first; the path is passed here.
@@ -54,13 +58,13 @@ export async function createResume(
       source: "pdf" as const,
     };
   } else {
-    const content = contentSchema.safeParse(formData.get("content"));
+    const content = contentSchema(t).safeParse(formData.get("content"));
     if (!content.success) return { error: content.error.issues[0].message };
     input = { content: content.data, source: "paste" as const };
   }
 
   const created = await createResumeWithVersion(supabase, user.id, title.data, input);
-  if (!created) return { error: "Could not save the resume. Try again." };
+  if (!created) return { error: t.errors.resumeActions.saveFailed };
 
   revalidatePath("/dashboard/resumes");
   redirect(`/dashboard/resumes/${created.resumeId}`);
@@ -70,20 +74,22 @@ export async function saveNewVersion(
   _prev: ResumeActionState,
   formData: FormData,
 ): Promise<ResumeActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Your session expired — sign in again." };
+  const { supabase, user, t } = await requireUser();
+  if (!user) return { error: t.newAnalysis.errors.sessionExpired };
 
   const resumeId = formData.get("resumeId");
-  if (typeof resumeId !== "string" || !resumeId) return { error: "Missing resume." };
+  if (typeof resumeId !== "string" || !resumeId) {
+    return { error: t.errors.generic };
+  }
 
-  const content = contentSchema.safeParse(formData.get("content"));
+  const content = contentSchema(t).safeParse(formData.get("content"));
   if (!content.success) return { error: content.error.issues[0].message };
 
   const saved = await addResumeVersion(supabase, user.id, resumeId, {
     content: content.data,
     source: "paste",
   });
-  if (!saved) return { error: "Could not save the new version. Try again." };
+  if (!saved) return { error: t.errors.resumeActions.saveFailed };
 
   revalidatePath(`/dashboard/resumes/${resumeId}`);
   return null;
@@ -93,12 +99,14 @@ export async function renameResume(
   _prev: ResumeActionState,
   formData: FormData,
 ): Promise<ResumeActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "Your session expired — sign in again." };
+  const { supabase, user, t } = await requireUser();
+  if (!user) return { error: t.newAnalysis.errors.sessionExpired };
 
   const resumeId = formData.get("resumeId");
-  const title = titleSchema.safeParse(formData.get("title"));
-  if (typeof resumeId !== "string" || !resumeId) return { error: "Missing resume." };
+  const title = titleSchema(t).safeParse(formData.get("title"));
+  if (typeof resumeId !== "string" || !resumeId) {
+    return { error: t.errors.generic };
+  }
   if (!title.success) return { error: title.error.issues[0].message };
 
   await supabase

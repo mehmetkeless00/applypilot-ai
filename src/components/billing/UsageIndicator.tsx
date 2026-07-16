@@ -1,9 +1,11 @@
 export function UsageIndicator({
   used,
   limit,
+  label = "Analyses this month",
 }: {
   used: number;
   limit: number;
+  label?: string;
 }) {
   const pct = Math.min(100, Math.round((used / limit) * 100));
   const exhausted = used >= limit;
@@ -11,7 +13,7 @@ export function UsageIndicator({
     <div>
       <div className="flex items-baseline justify-between text-sm">
         <span className="font-medium text-slate-900 dark:text-slate-100">
-          Analyses this month
+          {label}
         </span>
         <span
           className={

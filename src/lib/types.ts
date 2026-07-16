@@ -79,6 +79,8 @@ export interface Analysis {
   resume_version_id: string | null;
   /** Set when this analysis re-scored an earlier one. */
   rescored_from: string | null;
+  /** Language of the AI-generated output; rows predating the column are 'en'. */
+  output_language?: "en" | "tr";
   model: string;
   created_at: string;
 }

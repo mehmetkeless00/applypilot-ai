@@ -7,23 +7,27 @@ import { createResume, type ResumeActionState } from "@/app/dashboard/resumes/ac
 import { Button } from "@/components/ui/Button";
 import { Input, Textarea } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { getMessages, type Locale } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
-export function NewResumeForm() {
+export function NewResumeForm({ locale = "en" }: { locale?: Locale }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"paste" | "upload">("paste");
   const [uploading, setUploading] = useState(false);
+  const messages = getMessages(locale);
+  const t = messages.resumes.form;
+  const errs = messages.newAnalysis.errors;
 
   const [state, formAction, pending] = useActionState(
     async (prev: ResumeActionState, formData: FormData) => {
       // For uploads, store the PDF first and pass its path to the action.
       if (mode === "upload") {
         const file = fileInputRef.current?.files?.[0];
-        if (!file) return { error: "Choose a PDF resume to upload." };
-        if (file.type !== "application/pdf") return { error: "The resume must be a PDF file." };
-        if (file.size > MAX_PDF_BYTES) return { error: "The PDF is too large (max 10 MB)." };
+        if (!file) return { error: errs.choosePdfFile };
+        if (file.type !== "application/pdf") return { error: errs.mustBePdf };
+        if (file.size > MAX_PDF_BYTES) return { error: errs.pdfTooLarge };
 
         setUploading(true);
         try {
@@ -31,12 +35,12 @@ export function NewResumeForm() {
           const {
             data: { user },
           } = await supabase.auth.getUser();
-          if (!user) return { error: "Your session expired — sign in again." };
+          if (!user) return { error: errs.sessionExpired };
           const path = `${user.id}/${crypto.randomUUID()}.pdf`;
           const { error } = await supabase.storage
             .from("resumes")
             .upload(path, file, { contentType: "application/pdf" });
-          if (error) return { error: "Could not upload the PDF. Try again." };
+          if (error) return { error: errs.uploadFailed };
           formData.set("filePath", path);
         } finally {
           setUploading(false);
@@ -50,11 +54,11 @@ export function NewResumeForm() {
   return (
     <form action={formAction} className="space-y-4">
       <Input
-        label="Name"
+        label={t.name}
         name="title"
         required
         maxLength={120}
-        placeholder="e.g. Backend Engineer resume"
+        placeholder={t.namePlaceholder}
       />
 
       <div className="flex rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800 w-fit">
@@ -70,22 +74,22 @@ export function NewResumeForm() {
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400",
             )}
           >
-            {m === "paste" ? "Paste text" : "Upload PDF"}
+            {m === "paste" ? t.pasteTab : t.uploadTab}
           </button>
         ))}
       </div>
 
       {mode === "paste" ? (
         <Textarea
-          label="Resume text"
+          label={t.resumeText}
           name="content"
           rows={10}
-          placeholder="Paste your full resume text…"
+          placeholder={t.textPlaceholder}
         />
       ) : (
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-            PDF file
+            {t.pdfFile}
           </label>
           <input
             ref={fileInputRef}
@@ -104,7 +108,7 @@ export function NewResumeForm() {
 
       <Button type="submit" disabled={pending || uploading}>
         {(pending || uploading) && <Spinner />}
-        Save resume
+        {pending || uploading ? t.saving : t.submit}
       </Button>
     </form>
   );

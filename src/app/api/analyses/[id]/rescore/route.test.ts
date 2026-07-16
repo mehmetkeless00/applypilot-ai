@@ -244,6 +244,24 @@ describe("POST /api/analyses/[id]/rescore", () => {
     expect(call.resumeText).toBeUndefined();
   });
 
+  it("preserves the original analysis language on re-score", async () => {
+    analysisChain.row = { ...baseAnalysis, output_language: "tr" };
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("tr");
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.output_language).toBe("tr");
+  });
+
+  it("defaults legacy analyses without a language to English", async () => {
+    // baseAnalysis has no output_language column value (pre-migration row).
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(200);
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("en");
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.output_language).toBe("en");
+  });
+
   it("re-persists decoded metadata when re-scoring a legacy analysis", async () => {
     analysisChain.row = {
       ...baseAnalysis,

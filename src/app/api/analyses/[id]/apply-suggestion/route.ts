@@ -6,6 +6,8 @@ import {
   isApplicableSuggestion,
 } from "@/lib/resumes/applySuggestion";
 import { addResumeVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import type { ResumeSuggestion } from "@/lib/types";
 
 // Applies one resume suggestion from an analysis to the linked saved
@@ -30,20 +32,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const supabase = await createClient();
+  const t = getMessages(await getLocale()).errors;
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: t.notAuthenticated }, { status: 401 });
   }
 
   const body = await request.json().catch(() => null);
   const index = body?.suggestion;
   if (!Number.isInteger(index) || index < 0 || index > 99) {
-    return NextResponse.json(
-      { error: "Invalid suggestion reference." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: t.apply.invalidRef }, { status: 400 });
   }
 
   const { id } = await params;
@@ -55,48 +55,30 @@ export async function POST(
     .eq("id", id)
     .single();
   if (!analysis || analysis.user_id !== user.id) {
-    return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
+    return NextResponse.json({ error: t.analysisNotFound }, { status: 404 });
   }
 
   const suggestions = (analysis.resume_suggestions ?? []) as unknown[];
   const suggestion = suggestions[index];
   if (suggestion === undefined) {
-    return NextResponse.json(
-      { error: "That suggestion doesn't belong to this analysis." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: t.apply.notOnAnalysis }, { status: 400 });
   }
   if (!isApplicableSuggestion(suggestion)) {
-    return NextResponse.json(
-      {
-        error:
-          "This suggestion can't be applied automatically. Copy the improved text and edit your resume instead.",
-      },
-      { status: 422 },
-    );
+    return NextResponse.json({ error: t.apply.cantAutoApply }, { status: 422 });
   }
   const s: ResumeSuggestion = suggestion;
 
   if (!analysis.resume_id) {
-    return conflict(
-      "no_saved_resume",
-      "This analysis isn't linked to a saved resume. Save your resume to the library and re-run the analysis to apply suggestions automatically.",
-    );
+    return conflict("no_saved_resume", t.apply.noSavedResume);
   }
 
   // RLS scopes versions to the owner; verify explicitly as well.
   const latest = await fetchLatestVersion(supabase, analysis.resume_id);
   if (!latest || latest.user_id !== user.id) {
-    return conflict(
-      "no_saved_resume",
-      "The saved resume linked to this analysis no longer exists.",
-    );
+    return conflict("no_saved_resume", t.apply.resumeGone);
   }
   if (!latest.content) {
-    return conflict(
-      "no_text",
-      "This resume version is a PDF without editable text. Open the resume and save its text first, then apply the suggestion.",
-    );
+    return conflict("no_text", t.apply.noText);
   }
 
   // Duplicate-submit protection: the same suggestion applied on top of the
@@ -123,13 +105,7 @@ export async function POST(
   // Stored suggestions passed it at analysis time, but legacy analyses
   // predate the guard and the resume may have changed since.
   if (!isSuggestionSupported(s, latest.content)) {
-    return NextResponse.json(
-      {
-        error:
-          "This suggestion didn't pass the factual-accuracy check, so it can't be applied automatically. Review it and edit your resume manually.",
-      },
-      { status: 422 },
-    );
+    return NextResponse.json({ error: t.apply.integrityFailed }, { status: 422 });
   }
 
   const outcome = applySuggestionToContent(
@@ -139,14 +115,8 @@ export async function POST(
   );
   if (!outcome.ok) {
     return outcome.reason === "not_found"
-      ? conflict(
-          "text_not_found",
-          "Your resume has changed since this analysis, so the original text couldn't be found. Review your resume and make the change manually.",
-        )
-      : conflict(
-          "multiple_matches",
-          "That text appears more than once in your resume, so it can't be replaced automatically. Review your resume and make the change manually.",
-        );
+      ? conflict("text_not_found", t.apply.textNotFound)
+      : conflict("multiple_matches", t.apply.multipleMatches);
   }
 
   const created = await addResumeVersion(supabase, user.id, analysis.resume_id, {
@@ -176,10 +146,7 @@ export async function POST(
         alreadyApplied: true,
       });
     }
-    return NextResponse.json(
-      { error: "Could not create the new resume version. Try again." },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: t.apply.createFailed }, { status: 500 });
   }
 
   return NextResponse.json({

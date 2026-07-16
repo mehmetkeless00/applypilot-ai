@@ -47,6 +47,14 @@ Node 22 is recommended (`.nvmrc` provided); Node 20 works but supabase-js has de
 - **Analytics (PostHog)** — set `NEXT_PUBLIC_POSTHOG_KEY` (and optionally `NEXT_PUBLIC_POSTHOG_HOST`). Only pathname-level pageviews are captured; autocapture is off.
 - **Error monitoring (Sentry)** — set `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`. `sendDefaultPii` is off so resume content never rides along in error payloads.
 
+## Languages (English / Turkish)
+
+The full product UI ships in **English and Turkish**. The switcher in the public and dashboard headers persists the choice in a `lang` cookie that server components read per request (`src/lib/i18n/`), so pages render in the selected language on the server — correct `<html lang>`, no client-side flash, and no locale route trees (all URLs unchanged). English is the fallback for unknown/missing values, and the typed catalog (`en.ts` is the source of truth; `tr.ts` must cover every key at compile time, verified again by a runtime test) keeps the two in sync. User content — resume text, job descriptions, company names, schools, technologies, dates — is never translated. Note: reading the cookie makes the landing page server-rendered per request (it was previously static).
+
+**Analysis output language** is separate from the UI language: the New Analysis form has an *Analysis language* selector (defaulting to the UI language) and the choice is stored per analysis (`analyses.output_language`, migration `0010_analysis_language.sql`, legacy rows default to English). Turkish analyses get a prompt directive that writes all narrative output in natural Turkish while keeping every factual-integrity rule: proper nouns, technologies, dates, and metrics stay verbatim, `original_text` remains the untranslated resume text, and `improved_text` stays in the resume's own language so applying suggestions keeps the resume coherent. Re-scores preserve the original analysis's language. PDF/DOCX section headings follow the analysis language; dates format per locale (`en-US`/`tr-TR`). The deterministic anti-fabrication guard covers both languages (Turkish qualifier phrases, apostrophe-suffixed proper nouns like "Google'da").
+
+The Turkish privacy/terms pages are product translations of the same template text — like the English originals, have counsel review them before relying on them.
+
 ## Resume library
 
 Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every edit creates an immutable new version, and each analysis records exactly which resume version it scored (`analyses.resume_id` / `resume_version_id`). The new-analysis form defaults to your saved resume; pasted or uploaded resumes can be saved to the library in the same step. Deleting a resume keeps past analyses intact (links null out). Migration: `0005_resumes.sql`.

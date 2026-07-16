@@ -7,6 +7,8 @@ import {
 } from "@/components/dashboard/OnboardingChecklist";
 import { formatDate, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import type { Analysis } from "@/lib/types";
 
 export const metadata = { title: "My analyses" };
@@ -28,6 +30,8 @@ function StatTile({ label, value }: { label: string; value: string }) {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const locale = await getLocale();
+  const t = getMessages(locale);
   const { data } = await supabase
     .from("analyses")
     .select("id, job_title, company, fit_score, created_at, rescored_from")
@@ -61,28 +65,28 @@ export default async function DashboardPage() {
     <div>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-          My analyses
+          {t.dashboard.title}
         </h1>
         <Link
           href="/dashboard/new"
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
         >
-          New analysis
+          {t.nav.newAnalysis}
         </Link>
       </div>
 
       {total > 0 && (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatTile label="Analyses" value={String(total)} />
-          <StatTile label="Average fit" value={`${avg}/100`} />
-          <StatTile label="Best fit" value={`${best}/100`} />
-          <StatTile label="Re-scores" value={String(rescores)} />
+          <StatTile label={t.dashboard.stats.analyses} value={String(total)} />
+          <StatTile label={t.dashboard.stats.averageFit} value={`${avg}/100`} />
+          <StatTile label={t.dashboard.stats.bestFit} value={`${best}/100`} />
+          <StatTile label={t.dashboard.stats.rescores} value={String(rescores)} />
         </div>
       )}
 
       {shouldShowOnboarding(total) ? (
         <div className="mt-8">
-          <OnboardingChecklist hasResume={hasResume} />
+          <OnboardingChecklist hasResume={hasResume} locale={locale} />
         </div>
       ) : (
         <ul className="mt-6 divide-y divide-slate-200 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-200 dark:divide-slate-800 dark:bg-slate-900 dark:ring-slate-800">
@@ -103,19 +107,15 @@ export default async function DashboardPage() {
                     {a.job_title}
                   </p>
                   <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                    {a.company || "Company not specified"}
+                    {a.company || t.dashboard.companyUnknown}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <Badge tone={toneToBadge[scoreTone(a.fit_score)]}>
-                    {scoreTone(a.fit_score) === "strong"
-                      ? "Strong fit"
-                      : scoreTone(a.fit_score) === "fair"
-                        ? "Fair fit"
-                        : "Weak fit"}
+                    {t.dashboard.fit[scoreTone(a.fit_score)]}
                   </Badge>
                   <span className="text-sm text-slate-400">
-                    {formatDate(a.created_at)}
+                    {formatDate(a.created_at, locale)}
                   </span>
                 </div>
               </Link>

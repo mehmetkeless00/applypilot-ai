@@ -1,7 +1,7 @@
 import { FinishReason, GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { AnalysisResult, clampScore, type AnalysisResultData } from "./schema";
-import { SYSTEM_PROMPT, buildUserParts, type PromptInput } from "./prompt";
+import { buildUserParts, systemPromptFor, type PromptInput } from "./prompt";
 
 export const MODEL = "gemini-2.5-flash";
 
@@ -51,7 +51,7 @@ export async function analyze(input: PromptInput): Promise<AnalyzeOutput> {
     model: MODEL,
     contents: [{ role: "user", parts: buildUserParts(input) }],
     config: {
-      systemInstruction: SYSTEM_PROMPT,
+      systemInstruction: systemPromptFor(input.outputLanguage ?? "en"),
       responseMimeType: "application/json",
       responseJsonSchema: RESPONSE_JSON_SCHEMA,
       maxOutputTokens: 16000,

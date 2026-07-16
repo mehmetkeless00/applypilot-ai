@@ -1,4 +1,6 @@
 import { normalizePlan, type Plan } from "./plans";
+import { getMessages, type Locale } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
 
 // Pure presentation logic for subscription state, shared by the billing
 // page (and testable without rendering). Tolerates legacy rows where the
@@ -21,26 +23,21 @@ export interface SubscriptionSummary {
   warning: boolean;
 }
 
-function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export function subscriptionSummary(
   profile: BillingProfileFields | null | undefined,
+  locale: Locale = "en",
 ): SubscriptionSummary {
+  const t = getMessages(locale).billing.status;
   const plan = normalizePlan(profile?.plan);
   const status = profile?.subscription_status ?? null;
   const periodEnd = profile?.current_period_end ?? null;
   const cancelAtPeriodEnd = profile?.cancel_at_period_end ?? false;
+  const day = periodEnd ? formatDate(periodEnd, locale) : null;
 
   if (plan === "free") {
     return {
       plan,
-      statusLabel: status === "canceled" ? "Canceled" : "Free plan",
+      statusLabel: status === "canceled" ? t.canceled : t.freePlan,
       detail: null,
       warning: false,
     };
@@ -49,10 +46,8 @@ export function subscriptionSummary(
   if (status === "past_due") {
     return {
       plan,
-      statusLabel: "Payment past due",
-      detail: periodEnd
-        ? `Pro access continues while we retry — update your payment method to keep it past ${formatDay(periodEnd)}.`
-        : "Pro access continues while we retry your payment.",
+      statusLabel: t.pastDue,
+      detail: day ? t.pastDueDetailWithDate(day) : t.pastDueDetail,
       warning: true,
     };
   }
@@ -60,18 +55,16 @@ export function subscriptionSummary(
   if (cancelAtPeriodEnd) {
     return {
       plan,
-      statusLabel: "Cancellation scheduled",
-      detail: periodEnd
-        ? `Pro access ends on ${formatDay(periodEnd)}. You can resume anytime before then.`
-        : "Pro access ends at the close of the paid period.",
+      statusLabel: t.cancelScheduled,
+      detail: day ? t.cancelDetailWithDate(day) : t.cancelDetail,
       warning: false,
     };
   }
 
   return {
     plan,
-    statusLabel: status === "trialing" ? "Trialing" : "Active",
-    detail: periodEnd ? `Renews on ${formatDay(periodEnd)}.` : null,
+    statusLabel: status === "trialing" ? t.trialing : t.active,
+    detail: day ? t.renewsOn(day) : null,
     warning: false,
   };
 }

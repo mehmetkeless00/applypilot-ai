@@ -8,6 +8,8 @@ import { PLANS } from "@/lib/billing/plans";
 import { billingAvailable } from "@/lib/billing/stripe";
 import { subscriptionSummary } from "@/lib/billing/status";
 import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata = { title: "Billing" };
 
@@ -33,55 +35,60 @@ export default async function BillingPage({
     countUsageSince(supabase, "analysis", monthStartUtc()),
   ]);
 
-  const summary = subscriptionSummary(profile);
+  const locale = await getLocale();
+  const t = getMessages(locale).billing;
+  const summary = subscriptionSummary(profile, locale);
   const plan = summary.plan;
   const available = billingAvailable();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        Billing
+        {t.title}
       </h1>
 
       {checkout === "success" && (
         <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400">
-          Welcome to Pro! Your new limit is available immediately.
+          {t.checkoutSuccess}
         </p>
       )}
       {checkout === "canceled" && (
         <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-inset ring-slate-500/20 dark:bg-slate-500/10 dark:text-slate-400">
-          Checkout canceled — no charge was made.
+          {t.checkoutCanceled}
         </p>
       )}
       {summary.warning && (
         <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
-          Your last payment failed. Update your payment method to keep Pro —
-          we&apos;ll retry automatically for a few days.
+          {t.paymentWarning}
         </p>
       )}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle>Subscription</CardTitle>
+          <CardTitle>{t.subscription}</CardTitle>
           <Badge tone={summary.warning ? "amber" : plan === "pro" ? "indigo" : "slate"}>
             {summary.statusLabel}
           </Badge>
         </div>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-          You&apos;re on the <span className="font-semibold">{PLANS[plan].name}</span>{" "}
-          plan ({PLANS[plan].analysesPerMonth} analyses/month).
+          {t.youAreOn}{" "}
+          <span className="font-semibold">{t.planNames[plan]}</span>{" "}
+          {t.planLine(t.planNames[plan], PLANS[plan].analysesPerMonth)}
           {summary.detail ? ` ${summary.detail}` : ""}
         </p>
       </Card>
 
       <Card>
-        <CardTitle>Usage</CardTitle>
+        <CardTitle>{t.usage}</CardTitle>
         <div className="mt-4">
-          <UsageIndicator used={used} limit={PLANS[plan].analysesPerMonth} />
+          <UsageIndicator
+            used={used}
+            limit={PLANS[plan].analysesPerMonth}
+            label={t.usageLabel}
+          />
         </div>
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          Limits reset on the 1st of each month (UTC). Re-scores count as
-          analyses.
+          {t.usageHint}
         </p>
       </Card>
 
@@ -89,10 +96,11 @@ export default async function BillingPage({
         <PlanCard
           plan="free"
           current={plan === "free"}
+          locale={locale}
           action={
             plan === "pro" ? (
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Cancel anytime from the billing portal below.
+                {t.cancelAnytime}
               </p>
             ) : undefined
           }
@@ -101,18 +109,23 @@ export default async function BillingPage({
           plan="pro"
           current={plan === "pro"}
           comingSoon={!available && plan === "free"}
+          locale={locale}
           action={
             plan === "free" ? (
               available ? (
-                <BillingActionButton endpoint="/api/billing/checkout">
-                  Upgrade to Pro — ${PLANS.pro.priceMonthly}/mo
+                <BillingActionButton endpoint="/api/billing/checkout" locale={locale}>
+                  {t.upgradeCta(PLANS.pro.priceMonthly)}
                 </BillingActionButton>
               ) : (
-                <ComingSoonAction />
+                <ComingSoonAction locale={locale} />
               )
             ) : (
-              <BillingActionButton endpoint="/api/billing/portal" variant="secondary">
-                Manage subscription
+              <BillingActionButton
+                endpoint="/api/billing/portal"
+                variant="secondary"
+                locale={locale}
+              >
+                {t.manage}
               </BillingActionButton>
             )
           }
@@ -120,10 +133,7 @@ export default async function BillingPage({
       </div>
 
       {(available || plan === "pro") && (
-        <p className="text-xs text-slate-400">
-          Payments are processed by Stripe. Invoices, payment methods, and
-          cancellation are handled in the Stripe billing portal.
-        </p>
+        <p className="text-xs text-slate-400">{t.stripeFooter}</p>
       )}
     </div>
   );

@@ -9,15 +9,18 @@ import {
   getStripe,
   missingBillingConfig,
 } from "@/lib/billing/stripe";
-import { normalizePlan, PRO_UNAVAILABLE_MESSAGE } from "@/lib/billing/plans";
+import { normalizePlan } from "@/lib/billing/plans";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
+  const t = getMessages(await getLocale());
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ error: t.errors.notAuthenticated }, { status: 401 });
   }
 
   // Env var names go to server logs only; the response stays neutral.
@@ -25,7 +28,10 @@ export async function POST(request: Request) {
     console.error(
       `Checkout refused — billing not configured: set ${missingBillingConfig().join(", ")}`,
     );
-    return NextResponse.json({ error: PRO_UNAVAILABLE_MESSAGE }, { status: 503 });
+    return NextResponse.json(
+      { error: t.billing.proUnavailable },
+      { status: 503 },
+    );
   }
 
   const appUrl =
@@ -43,7 +49,7 @@ export async function POST(request: Request) {
 
     if (normalizePlan(profile?.plan) === "pro") {
       return NextResponse.json(
-        { error: "You are already on the Pro plan." },
+        { error: t.errors.billing.alreadyPro },
         { status: 400 },
       );
     }
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
       if (error) {
         console.error("Failed to save Stripe customer id:", error);
         return NextResponse.json(
-          { error: "Could not start checkout. Try again." },
+          { error: t.errors.billing.checkoutFailed },
           { status: 500 },
         );
       }
@@ -90,13 +96,13 @@ export async function POST(request: Request) {
     if (err instanceof BillingConfigError) {
       console.error(err.message);
       return NextResponse.json(
-        { error: PRO_UNAVAILABLE_MESSAGE },
+        { error: t.billing.proUnavailable },
         { status: 503 },
       );
     }
     console.error("Checkout error:", err);
     return NextResponse.json(
-      { error: "Could not start checkout. Try again." },
+      { error: t.errors.billing.checkoutFailed },
       { status: 502 },
     );
   }

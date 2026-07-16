@@ -2,6 +2,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { normalizePlan, PLANS } from "@/lib/billing/plans";
 import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 /** Compact monthly-usage indicator for the dashboard header. */
 export async function HeaderUsage() {
@@ -10,6 +12,7 @@ export async function HeaderUsage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
+  const t = getMessages(await getLocale()).nav;
 
   const [{ data: profile }, count] = await Promise.all([
     supabase.from("profiles").select("plan").eq("id", user.id).single(),
@@ -29,13 +32,13 @@ export async function HeaderUsage() {
           ? "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400"
           : "bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-800 dark:text-slate-400 dark:ring-slate-700"
       }`}
-      title="Analyses used this month"
+      title={t.usageTitle}
     >
       <span
         aria-hidden
         className={`size-1.5 rounded-full ${exhausted ? "bg-red-500" : "bg-indigo-500"}`}
       />
-      {used}/{limit} this month
+      {t.usageThisMonth(used, limit)}
     </Link>
   );
 }

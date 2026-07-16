@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { AnalyzeRequest } from "@/lib/ai/schema";
 import { analysisErrorResponse, executeAnalysis } from "@/lib/analysis/execute";
+import { getLocale } from "@/lib/i18n/server";
 
 // Generous headroom for slow model responses; Flash typically answers in seconds.
 export const maxDuration = 300;
@@ -30,10 +31,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const locale = await getLocale();
   try {
-    const { id } = await executeAnalysis(supabase, user, parsed.data);
+    const { id } = await executeAnalysis(supabase, user, {
+      ...parsed.data,
+      locale,
+    });
     return NextResponse.json({ id });
   } catch (err) {
-    return analysisErrorResponse(err);
+    return analysisErrorResponse(err, locale);
   }
 }

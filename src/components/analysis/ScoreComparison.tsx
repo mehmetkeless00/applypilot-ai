@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { Card, CardTitle } from "@/components/ui/Card";
-import {
-  compareAtsKeywords,
-  scoreChangeLabel,
-} from "@/lib/analysis/compare";
+import { compareAtsKeywords } from "@/lib/analysis/compare";
+import { getMessages, type Locale } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import type { AtsKeyword } from "@/lib/types";
 
@@ -19,7 +17,15 @@ export interface ComparisonRun {
   resumeVersion?: number | null;
 }
 
-function KeywordChips({ keywords, tone }: { keywords: string[]; tone: "green" | "red" }) {
+function KeywordChips({
+  keywords,
+  tone,
+  moreLabel,
+}: {
+  keywords: string[];
+  tone: "green" | "red";
+  moreLabel: string;
+}) {
   const shown = keywords.slice(0, 8);
   const more = keywords.length - shown.length;
   const cls =
@@ -36,9 +42,7 @@ function KeywordChips({ keywords, tone }: { keywords: string[]; tone: "green" | 
           {k}
         </span>
       ))}
-      {more > 0 && (
-        <span className="text-xs text-slate-400">+{more} more</span>
-      )}
+      {more > 0 && <span className="text-xs text-slate-400">{moreLabel}</span>}
     </span>
   );
 }
@@ -46,12 +50,20 @@ function KeywordChips({ keywords, tone }: { keywords: string[]; tone: "green" | 
 export function ScoreComparison({
   previous,
   current,
+  locale = "en",
 }: {
   previous: ComparisonRun;
   current: ComparisonRun;
+  locale?: Locale;
 }) {
+  const t = getMessages(locale).analysis.comparison;
   const delta = current.score - previous.score;
-  const label = scoreChangeLabel(previous.score, current.score);
+  const label =
+    delta > 0
+      ? t.improvedBy(delta)
+      : delta < 0
+        ? t.decreasedBy(-delta)
+        : t.noChange;
   const ats = compareAtsKeywords(previous.atsKeywords, current.atsKeywords);
   const hasAts =
     previous.atsKeywords.length > 0 || current.atsKeywords.length > 0;
@@ -63,12 +75,12 @@ export function ScoreComparison({
         : "bg-slate-50 text-slate-600 ring-slate-500/20 dark:bg-slate-500/10 dark:text-slate-400";
 
   const versionLabel = (run: ComparisonRun) =>
-    run.resumeVersion != null ? `resume v${run.resumeVersion}` : "same resume";
+    run.resumeVersion != null ? t.resumeVersion(run.resumeVersion) : t.sameResume;
 
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <CardTitle>Compared to the previous run</CardTitle>
+        <CardTitle>{t.title}</CardTitle>
         <span
           className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold ring-1 ring-inset ${tone}`}
         >
@@ -79,32 +91,32 @@ export function ScoreComparison({
       <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
         <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/60">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Previous
+            {t.previous}
           </p>
           <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
             {previous.score}
             <span className="text-sm font-normal text-slate-400">/100</span>
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {versionLabel(previous)} · {formatDate(previous.createdAt)}
+            {versionLabel(previous)} · {formatDate(previous.createdAt, locale)}
           </p>
           <Link
             href={`/dashboard/analysis/${previous.id}`}
             className="mt-1 inline-block text-xs font-semibold text-indigo-600 hover:text-indigo-500"
           >
-            View previous result
+            {t.viewPrevious}
           </Link>
         </div>
         <div className="rounded-lg bg-indigo-50 p-3 dark:bg-indigo-500/10">
           <p className="text-xs font-medium uppercase tracking-wide text-indigo-500">
-            This run
+            {t.thisRun}
           </p>
           <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
             {current.score}
             <span className="text-sm font-normal text-slate-400">/100</span>
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {versionLabel(current)} · {formatDate(current.createdAt)}
+            {versionLabel(current)} · {formatDate(current.createdAt, locale)}
           </p>
         </div>
       </div>
@@ -113,31 +125,36 @@ export function ScoreComparison({
         <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
           <p>
             <span className="font-medium text-slate-900 dark:text-slate-100">
-              ATS keywords:
+              {t.atsLabel}
             </span>{" "}
-            matched {ats.previous.matched} → {ats.current.matched} · weak{" "}
-            {ats.previous.weak} → {ats.current.weak} · missing{" "}
-            {ats.previous.missing} → {ats.current.missing}
+            {t.atsMatched} {ats.previous.matched} → {ats.current.matched} ·{" "}
+            {t.atsWeak} {ats.previous.weak} → {ats.current.weak} ·{" "}
+            {t.atsMissing} {ats.previous.missing} → {ats.current.missing}
           </p>
           {ats.nowMatched.length > 0 && (
             <p>
-              Now matched: <KeywordChips keywords={ats.nowMatched} tone="green" />
+              {t.nowMatched}{" "}
+              <KeywordChips
+                keywords={ats.nowMatched}
+                tone="green"
+                moreLabel={t.more(Math.max(0, ats.nowMatched.length - 8))}
+              />
             </p>
           )}
           {ats.regressed.length > 0 && (
             <p>
-              No longer matched:{" "}
-              <KeywordChips keywords={ats.regressed} tone="red" />
+              {t.regressed}{" "}
+              <KeywordChips
+                keywords={ats.regressed}
+                tone="red"
+                moreLabel={t.more(Math.max(0, ats.regressed.length - 8))}
+              />
             </p>
           )}
         </div>
       )}
 
-      <p className="mt-4 text-xs text-slate-400">
-        Scores measure alignment with this job description. A higher score
-        means a stronger keyword and requirement match — it doesn&apos;t
-        guarantee interviews or offers.
-      </p>
+      <p className="mt-4 text-xs text-slate-400">{t.disclaimer}</p>
     </Card>
   );
 }

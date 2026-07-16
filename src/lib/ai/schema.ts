@@ -74,6 +74,8 @@ export const AnalyzeRequest = z
     resumeId: z.uuid().optional(),
     /** When resume text/PDF is provided inline, also save it to the library. */
     saveResumeTitle: z.string().trim().min(1).max(120).optional(),
+    /** Language of the AI-generated output. Defaults to English. */
+    outputLanguage: z.enum(["en", "tr"]).optional(),
   })
   .refine((data) => data.resumeText || data.resumeFilePath || data.resumeId, {
     message: "Provide your resume as text, an uploaded PDF, or a saved resume",

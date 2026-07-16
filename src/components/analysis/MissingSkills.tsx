@@ -1,30 +1,37 @@
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardTitle } from "@/components/ui/Card";
+import { getMessages, type Locale } from "@/lib/i18n";
 import type { Importance, MissingSkill } from "@/lib/types";
 
-const groups: { importance: Importance; label: string; tone: "red" | "amber" | "slate" }[] = [
-  { importance: "critical", label: "Critical", tone: "red" },
-  { importance: "important", label: "Important", tone: "amber" },
-  { importance: "nice_to_have", label: "Nice to have", tone: "slate" },
+const groups: { importance: Importance; tone: "red" | "amber" | "slate" }[] = [
+  { importance: "critical", tone: "red" },
+  { importance: "important", tone: "amber" },
+  { importance: "nice_to_have", tone: "slate" },
 ];
 
-export function MissingSkills({ skills }: { skills: MissingSkill[] }) {
+export function MissingSkills({
+  skills,
+  locale = "en",
+}: {
+  skills: MissingSkill[];
+  locale?: Locale;
+}) {
+  const t = getMessages(locale).analysis;
   return (
     <Card>
-      <CardTitle>Missing skills</CardTitle>
+      <CardTitle>{t.missingSkillsTitle}</CardTitle>
       {skills.length === 0 ? (
         <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-          No significant gaps found — your resume covers this role&apos;s
-          requirements well.
+          {t.missingSkillsEmpty}
         </p>
       ) : (
         <div className="mt-4 space-y-5">
-          {groups.map(({ importance, label, tone }) => {
+          {groups.map(({ importance, tone }) => {
             const group = skills.filter((s) => s.importance === importance);
             if (group.length === 0) return null;
             return (
               <div key={importance}>
-                <Badge tone={tone}>{label}</Badge>
+                <Badge tone={tone}>{t.importance[importance]}</Badge>
                 <ul className="mt-2 space-y-3">
                   {group.map((s) => (
                     <li key={s.skill} className="text-sm">

@@ -10,6 +10,8 @@ import { VersionCompare } from "@/components/resumes/VersionCompare";
 import { loadPdfForResume } from "@/lib/resumes/resumes";
 import { formatDate, resumeSourceLabel, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import type { Analysis, Resume, ResumeVersion } from "@/lib/types";
 
 const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
@@ -23,6 +25,8 @@ export default async function ResumePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const locale = await getLocale();
+  const t = getMessages(locale).resumes;
 
   const [{ data: resumeData }, { data: versionData }, { data: analysisData }] =
     await Promise.all([
@@ -69,78 +73,80 @@ export default async function ResumePage({
             href="/dashboard/resumes"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
           >
-            ← All resumes
+            {t.detail.allResumes}
           </Link>
-          <ResumeTitleForm resumeId={resume.id} title={resume.title} />
+          <ResumeTitleForm resumeId={resume.id} title={resume.title} locale={locale} />
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {versions.length} {versions.length === 1 ? "version" : "versions"} ·
-            updated {formatDate(resume.updated_at)}
+            {t.detail.meta(
+              t.versions(versions.length),
+              formatDate(resume.updated_at, locale),
+            )}
           </p>
         </div>
-        <DeleteResumeButton resumeId={resume.id} />
+        <DeleteResumeButton resumeId={resume.id} locale={locale} />
       </div>
 
       {latest?.content != null ? (
         <Card>
           <CardTitle>
-            Current version{" "}
+            {t.detail.currentVersion}{" "}
             <span className="font-normal text-slate-400">v{latest.version}</span>
           </CardTitle>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Edit and save to create version {latest.version + 1}. Old versions
-            are kept so past analyses stay traceable.
+            {t.detail.editHint(latest.version + 1)}
           </p>
           <div className="mt-4">
-            <ResumeEditor resumeId={resume.id} initialContent={latest.content} />
+            <ResumeEditor
+              resumeId={resume.id}
+              initialContent={latest.content}
+              locale={locale}
+            />
           </div>
         </Card>
       ) : (
         <Card>
           <CardTitle>
-            Current version{" "}
+            {t.detail.currentVersion}{" "}
             <span className="font-normal text-slate-400">
-              v{latest?.version ?? 1} · PDF
+              v{latest?.version ?? 1} · {t.detail.pdfTag}
             </span>
           </CardTitle>
           {extractedFromPdf ? (
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              We extracted the text from your uploaded PDF — review it below
-              and save to create an editable version. The original PDF stays
-              stored unchanged.
+              {t.detail.pdfExtracted}
             </p>
           ) : (
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              We couldn&apos;t extract text from this PDF (it may be scanned
-              or image-based). Paste your resume text below to make it
-              editable — analyses keep using the original PDF until then.
+              {t.detail.pdfNoText}
             </p>
           )}
           <div className="mt-4">
             <ResumeEditor
               resumeId={resume.id}
               initialContent={extractedFromPdf ?? ""}
+              locale={locale}
             />
           </div>
         </Card>
       )}
 
       <Card>
-        <CardTitle>Score history</CardTitle>
+        <CardTitle>{t.detail.scoreHistory}</CardTitle>
         {history.length === 0 ? (
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            No scores yet — results appear here after you{" "}
+            {t.detail.scoreHistoryEmptyPrefix}{" "}
             <Link
               href="/dashboard/new"
               className="font-medium text-indigo-600 hover:text-indigo-500"
             >
-              analyze a job
+              {t.detail.scoreHistoryEmptyLink}
             </Link>{" "}
-            or re-score one with this resume.
+            {t.detail.scoreHistoryEmptySuffix}
           </p>
         ) : (
           <>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Analyses that used this resume, newest first.
+              {t.detail.scoreHistoryHint}
             </p>
             <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
             {history.map((a) => (
@@ -162,7 +168,7 @@ export default async function ResumePage({
                     </span>
                   )}
                   <span className="shrink-0 text-slate-400">
-                    {formatDate(a.created_at)}
+                    {formatDate(a.created_at, locale)}
                   </span>
                 </Link>
               </li>
@@ -174,12 +180,13 @@ export default async function ResumePage({
 
       {versions.length > 1 && (
         <Card>
-          <CardTitle>Compare versions</CardTitle>
+          <CardTitle>{t.detail.compareTitle}</CardTitle>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            See exactly what changed between two versions.
+            {t.detail.compareHint}
           </p>
           <div className="mt-4">
             <VersionCompare
+              locale={locale}
               versions={versions.map((v) => ({
                 id: v.id,
                 version: v.version,
@@ -194,7 +201,7 @@ export default async function ResumePage({
 
       {versions.length > 1 && (
         <Card>
-          <CardTitle>Version history</CardTitle>
+          <CardTitle>{t.detail.versionHistory}</CardTitle>
           <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
             {versions.map((v) => (
               <li
@@ -205,18 +212,18 @@ export default async function ResumePage({
                   v{v.version}
                 </Badge>
                 <span className="text-slate-600 dark:text-slate-400">
-                  {resumeSourceLabel(v.source)}
+                  {resumeSourceLabel(v.source, locale)}
                 </span>
                 {v.source_analysis_id && (
                   <Link
                     href={`/dashboard/analysis/${v.source_analysis_id}`}
                     className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
                   >
-                    View analysis
+                    {t.detail.viewAnalysis}
                   </Link>
                 )}
                 <span className="ml-auto text-slate-400">
-                  {formatDate(v.created_at)}
+                  {formatDate(v.created_at, locale)}
                 </span>
               </li>
             ))}

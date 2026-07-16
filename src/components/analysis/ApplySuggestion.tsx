@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
+import { getMessages, type Locale } from "@/lib/i18n";
 import type { ResumeSuggestion } from "@/lib/types";
 
 // Guided "apply suggestion" flow: preview dialog → explicit confirm →
@@ -15,22 +16,25 @@ import type { ResumeSuggestion } from "@/lib/types";
 export function SuggestionPreview({
   suggestion,
   titleId,
+  locale = "en",
 }: {
   suggestion: ResumeSuggestion;
   titleId: string;
+  locale?: Locale;
 }) {
+  const t = getMessages(locale).analysis.suggestions;
   return (
     <div>
       <h2
         id={titleId}
         className="text-lg font-bold text-slate-900 dark:text-slate-100"
       >
-        Preview change
+        {t.previewTitle}
       </h2>
       <div className="mt-4 space-y-3">
         <div className="rounded-md bg-slate-50 p-3 dark:bg-slate-800/60">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Before
+            {t.before}
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-400">
             {suggestion.original_text}
@@ -38,7 +42,7 @@ export function SuggestionPreview({
         </div>
         <div className="rounded-md bg-green-50 p-3 dark:bg-green-500/10">
           <p className="text-xs font-medium uppercase tracking-wide text-green-600 dark:text-green-400">
-            After
+            {t.after}
           </p>
           <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-300">
             {suggestion.improved_text}
@@ -48,8 +52,7 @@ export function SuggestionPreview({
           {suggestion.reason}
         </p>
         <p className="rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
-          Only the text shown above will change. The rest of your resume
-          stays exactly as it is, and your current version is kept.
+          {t.warning}
         </p>
       </div>
     </div>
@@ -66,12 +69,16 @@ export function ApplySuggestionButton({
   analysisId,
   suggestionIndex,
   suggestion,
+  locale = "en",
 }: {
   analysisId: string;
   suggestionIndex: number;
   suggestion: ResumeSuggestion;
+  locale?: Locale;
 }) {
   const router = useRouter();
+  const messages = getMessages(locale);
+  const t = messages.analysis.suggestions;
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const [busy, setBusy] = useState(false);
@@ -104,7 +111,7 @@ export function ApplySuggestionButton({
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
         setConflict(res.status === 409);
-        setError(payload?.error ?? "Something went wrong. Try again.");
+        setError(payload?.error ?? messages.errors.generic);
         setBusy(false);
         return;
       }
@@ -115,7 +122,7 @@ export function ApplySuggestionButton({
       });
       setBusy(false);
     } catch {
-      setError("Could not reach the server. Try again.");
+      setError(messages.billing.unreachable);
       setBusy(false);
     }
   }
@@ -129,13 +136,13 @@ export function ApplySuggestionButton({
       });
       const payload = await res.json().catch(() => null);
       if (!res.ok) {
-        setRescoreError(payload?.error ?? "Re-score failed. Try again.");
+        setRescoreError(payload?.error ?? messages.analysis.rescoreFailed);
         setRescoring(false);
         return;
       }
       router.push(`/dashboard/analysis/${payload.id}`);
     } catch {
-      setRescoreError("Could not reach the server. Try again.");
+      setRescoreError(messages.billing.unreachable);
       setRescoring(false);
     }
   }
@@ -143,7 +150,7 @@ export function ApplySuggestionButton({
   return (
     <>
       <Button variant="secondary" type="button" onClick={open}>
-        Apply to resume
+        {t.apply}
       </Button>
 
       {applied && (
@@ -151,29 +158,27 @@ export function ApplySuggestionButton({
           role="status"
           className="order-last basis-full rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-500/10 dark:text-green-400"
         >
-          <p className="font-semibold">
-            Suggestion applied. Resume version {applied.version} was created.
-          </p>
+          <p className="font-semibold">{t.appliedStatus(applied.version)}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <Button type="button" onClick={rescore} disabled={rescoring}>
               {rescoring && <Spinner />}
               {rescoring
-                ? "Re-scoring…"
-                : `Re-score with version ${applied.version}`}
+                ? messages.analysis.rescoring
+                : t.rescoreWith(applied.version)}
             </Button>
             <Link
               href={`/dashboard/resumes/${applied.resumeId}`}
               className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
             >
-              View resume
+              {t.viewResume}
             </Link>
           </div>
           <p className="mt-2 text-xs text-green-700 dark:text-green-500">
-            Re-scoring uses 1 analysis from your monthly limit.
+            {t.usesQuota}
           </p>
           {rescoreError && (
             <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
-              {rescoreError} Your new resume version is saved either way.
+              {rescoreError} {t.versionKept}
             </p>
           )}
         </div>
@@ -190,21 +195,24 @@ export function ApplySuggestionButton({
               id={titleId}
               className="text-lg font-bold text-slate-900 dark:text-slate-100"
             >
-              Suggestion applied
+              {t.appliedTitle}
             </h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-              Resume version {applied.version} was created. Your previous
-              versions are unchanged.
+              {t.appliedBody(applied.version)}
             </p>
             <div className="mt-4 flex flex-wrap justify-end gap-3">
               <Button variant="secondary" type="button" onClick={close}>
-                Close
+                {messages.common.close}
               </Button>
             </div>
           </div>
         ) : (
           <>
-            <SuggestionPreview suggestion={suggestion} titleId={titleId} />
+            <SuggestionPreview
+              suggestion={suggestion}
+              titleId={titleId}
+              locale={locale}
+            />
             {error && (
               <p
                 role="alert"
@@ -218,7 +226,7 @@ export function ApplySuggestionButton({
                       href="/dashboard/resumes"
                       className="font-semibold text-indigo-600 hover:text-indigo-500"
                     >
-                      Review your resume
+                      {t.reviewResume}
                     </Link>
                   </>
                 )}
@@ -231,16 +239,16 @@ export function ApplySuggestionButton({
                 onClick={close}
                 disabled={busy}
               >
-                Cancel
+                {messages.common.cancel}
               </Button>
               <Button
                 type="button"
                 onClick={confirmApply}
                 disabled={busy || conflict}
-                aria-label="Create a new resume version with this change"
+                aria-label={t.confirmAria}
               >
                 {busy && <Spinner />}
-                {busy ? "Creating version…" : "Create new version"}
+                {busy ? t.confirmBusy : t.confirm}
               </Button>
             </div>
           </>

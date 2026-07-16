@@ -2,14 +2,18 @@
 
 import { useActionState, useState } from "react";
 import { renameResume, type ResumeActionState } from "@/app/dashboard/resumes/actions";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 export function ResumeTitleForm({
   resumeId,
   title,
+  locale = "en",
 }: {
   resumeId: string;
   title: string;
+  locale?: Locale;
 }) {
+  const t = getMessages(locale);
   const [editing, setEditing] = useState(false);
   const [state, formAction, pending] = useActionState(
     async (prev: ResumeActionState, formData: FormData) => {
@@ -29,7 +33,7 @@ export function ResumeTitleForm({
           onClick={() => setEditing(true)}
           className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
         >
-          Rename
+          {t.resumes.editor.rename}
         </button>
       </h1>
     );
@@ -51,14 +55,14 @@ export function ResumeTitleForm({
         disabled={pending}
         className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
       >
-        Save
+        {t.resumes.editor.save}
       </button>
       <button
         type="button"
         onClick={() => setEditing(false)}
         className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
       >
-        Cancel
+        {t.common.cancel}
       </button>
       {state?.error && (
         <span className="text-sm text-red-600 dark:text-red-400">{state.error}</span>

@@ -5,14 +5,18 @@ import { saveNewVersion, type ResumeActionState } from "@/app/dashboard/resumes/
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 export function ResumeEditor({
   resumeId,
   initialContent,
+  locale = "en",
 }: {
   resumeId: string;
   initialContent: string;
+  locale?: Locale;
 }) {
+  const t = getMessages(locale).resumes;
   const [content, setContent] = useState(initialContent);
   const [state, formAction, pending] = useActionState(
     async (prev: ResumeActionState, formData: FormData) => {
@@ -27,7 +31,7 @@ export function ResumeEditor({
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="resumeId" value={resumeId} />
       <Textarea
-        label="Resume text"
+        label={t.form.resumeText}
         name="content"
         rows={16}
         value={content}
@@ -41,12 +45,10 @@ export function ResumeEditor({
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending || !dirty}>
           {pending && <Spinner />}
-          Save as new version
+          {t.editor.saveNewVersion}
         </Button>
         {!dirty && (
-          <span className="text-xs text-slate-400">
-            Make an edit to save a new version.
-          </span>
+          <span className="text-xs text-slate-400">{t.editor.editToSave}</span>
         )}
       </div>
     </form>

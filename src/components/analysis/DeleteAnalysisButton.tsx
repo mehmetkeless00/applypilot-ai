@@ -1,13 +1,21 @@
 "use client";
 
 import { deleteAnalysis } from "@/app/dashboard/actions";
+import { getMessages, type Locale } from "@/lib/i18n";
 
-export function DeleteAnalysisButton({ id }: { id: string }) {
+export function DeleteAnalysisButton({
+  id,
+  locale = "en",
+}: {
+  id: string;
+  locale?: Locale;
+}) {
+  const t = getMessages(locale);
   return (
     <form
       action={deleteAnalysis}
       onSubmit={(e) => {
-        if (!confirm("Delete this analysis? This cannot be undone.")) {
+        if (!confirm(t.analysis.deleteConfirm)) {
           e.preventDefault();
         }
       }}
@@ -17,7 +25,7 @@ export function DeleteAnalysisButton({ id }: { id: string }) {
         type="submit"
         className="text-sm font-medium text-red-600 hover:text-red-500 dark:text-red-400"
       >
-        Delete
+        {t.common.delete}
       </button>
     </form>
   );

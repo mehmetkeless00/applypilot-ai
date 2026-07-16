@@ -3,14 +3,22 @@
 import { useState } from "react";
 import { deleteResume } from "@/app/dashboard/resumes/actions";
 import { Button } from "@/components/ui/Button";
+import { getMessages, type Locale } from "@/lib/i18n";
 
-export function DeleteResumeButton({ resumeId }: { resumeId: string }) {
+export function DeleteResumeButton({
+  resumeId,
+  locale = "en",
+}: {
+  resumeId: string;
+  locale?: Locale;
+}) {
   const [confirming, setConfirming] = useState(false);
+  const t = getMessages(locale);
 
   if (!confirming) {
     return (
       <Button variant="ghost" type="button" onClick={() => setConfirming(true)}>
-        Delete resume
+        {t.resumes.deleteButton}
       </Button>
     );
   }
@@ -19,13 +27,13 @@ export function DeleteResumeButton({ resumeId }: { resumeId: string }) {
     <form action={deleteResume} className="flex items-center gap-2">
       <input type="hidden" name="resumeId" value={resumeId} />
       <span className="text-sm text-slate-500 dark:text-slate-400">
-        Delete this resume and all versions? Past analyses are kept.
+        {t.resumes.deleteConfirm}
       </span>
       <Button variant="danger" type="submit">
-        Delete
+        {t.common.delete}
       </Button>
       <Button variant="ghost" type="button" onClick={() => setConfirming(false)}>
-        Cancel
+        {t.common.cancel}
       </Button>
     </form>
   );

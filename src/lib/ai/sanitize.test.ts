@@ -226,3 +226,36 @@ describe("sanitizeAnalysisResult", () => {
     expect(result).toEqual(base);
   });
 });
+
+describe("Turkish output support", () => {
+  it("rejects Turkish date-guess qualifiers", () => {
+    expect(containsForbiddenPhrase("Temmuz 2024 (varsayıldı)")).toBe(true);
+    expect(containsForbiddenPhrase("tahmini tarih: 2023")).toBe(true);
+    expect(containsForbiddenPhrase("Tarih düzeltildi: Temmuz 2024")).toBe(true);
+    expect(containsForbiddenPhrase("Temmuz 2025'te başladı")).toBe(false);
+  });
+
+  it("accepts Turkish suggestions using proper nouns with case suffixes", () => {
+    // "Google'da" is Google + Turkish locative suffix — the base name is in
+    // the corpus, so this is rewording, not fabrication.
+    const ok = isSuggestionSupported(
+      suggestion(
+        "Worked at Google on search infrastructure.",
+        "Arama altyapısını Google'da geliştirdi ve sistemleri iyileştirdi.",
+      ),
+      "Worked at Google on search infrastructure since 2021.",
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("still rejects Turkish suggestions that invent facts", () => {
+    const ok = isSuggestionSupported(
+      suggestion(
+        "Worked at Google on search infrastructure.",
+        "Microsoft'ta geliri %45 artırdı.",
+      ),
+      "Worked at Google on search infrastructure since 2021.",
+    );
+    expect(ok).toBe(false);
+  });
+});

@@ -6,15 +6,20 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { isDisposableEmail } from "@/lib/auth/disposable";
+import { getMessages, type Messages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
-const credentialsSchema = z.object({
-  email: z.email("Enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
+// Validation messages come from the request's locale catalog.
+const credentialsSchema = (t: Messages["auth"]["errors"]) =>
+  z.object({
+    email: z.email(t.invalidEmail),
+    password: z.string().min(8, t.passwordMin),
+  });
 
-const signupSchema = credentialsSchema.extend({
-  fullName: z.string().trim().min(1, "Enter your name").max(120),
-});
+const signupSchema = (t: Messages["auth"]["errors"]) =>
+  credentialsSchema(t).extend({
+    fullName: z.string().trim().min(1, t.enterName).max(120),
+  });
 
 export type AuthState = { error: string } | null;
 
@@ -22,7 +27,8 @@ export async function signIn(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const parsed = credentialsSchema.safeParse({
+  const t = getMessages(await getLocale()).auth.errors;
+  const parsed = credentialsSchema(t).safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
@@ -33,7 +39,7 @@ export async function signIn(
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) {
-    return { error: "Invalid email or password" };
+    return { error: t.invalidCredentials };
   }
 
   revalidatePath("/", "layout");
@@ -45,7 +51,8 @@ export async function signUp(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
-  const parsed = signupSchema.safeParse({
+  const t = getMessages(await getLocale()).auth.errors;
+  const parsed = signupSchema(t).safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
     fullName: formData.get("fullName"),
@@ -55,9 +62,7 @@ export async function signUp(
   }
 
   if (isDisposableEmail(parsed.data.email)) {
-    return {
-      error: "Disposable email addresses aren't supported — use your regular email.",
-    };
+    return { error: t.disposableEmail };
   }
 
   const supabase = await createClient();
@@ -92,9 +97,8 @@ export async function requestPasswordReset(
   _prev: ResetState,
   formData: FormData,
 ): Promise<ResetState> {
-  const parsed = z
-    .email("Enter a valid email address")
-    .safeParse(formData.get("email"));
+  const t = getMessages(await getLocale()).auth.errors;
+  const parsed = z.email(t.invalidEmail).safeParse(formData.get("email"));
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
@@ -114,9 +118,10 @@ export async function updatePassword(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  const t = getMessages(await getLocale()).auth.errors;
   const parsed = z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(8, t.passwordMin)
     .safeParse(formData.get("password"));
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
@@ -127,9 +132,7 @@ export async function updatePassword(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return {
-      error: "This reset link has expired. Request a new one from the sign-in page.",
-    };
+    return { error: t.resetExpired };
   }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data });

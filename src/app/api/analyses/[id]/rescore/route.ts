@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analysisErrorResponse, executeAnalysis } from "@/lib/analysis/execute";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis } from "@/lib/types";
 
@@ -24,6 +26,8 @@ export async function POST(
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const locale = await getLocale();
+  const t = getMessages(locale);
   const { id } = await params;
   // RLS scopes the read to the caller's own analyses.
   const { data } = await supabase
@@ -32,7 +36,7 @@ export async function POST(
     .eq("id", id)
     .single();
   if (!data) {
-    return NextResponse.json({ error: "Analysis not found" }, { status: 404 });
+    return NextResponse.json({ error: t.errors.analysisNotFound }, { status: 404 });
   }
   // Decode legacy entity-encoded metadata so the re-scored analysis is
   // persisted with clean values.
@@ -41,7 +45,7 @@ export async function POST(
   const hasSavedResume = Boolean(original.resume_id);
   if (!hasSavedResume && !original.resume_text && !original.resume_file_path) {
     return NextResponse.json(
-      { error: "The original resume isn't available for this analysis." },
+      { error: t.errors.originalResumeUnavailable },
       { status: 400 },
     );
   }
@@ -58,9 +62,13 @@ export async function POST(
           ? undefined
           : (original.resume_file_path ?? undefined),
       rescoredFrom: original.id,
+      // Re-scores keep the original's output language; analyses created
+      // before the language column existed safely default to English.
+      outputLanguage: original.output_language === "tr" ? "tr" : "en",
+      locale,
     });
     return NextResponse.json({ id: newId });
   } catch (err) {
-    return analysisErrorResponse(err);
+    return analysisErrorResponse(err, locale);
   }
 }

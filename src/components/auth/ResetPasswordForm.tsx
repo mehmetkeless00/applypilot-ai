@@ -5,21 +5,23 @@ import { updatePassword, type AuthState } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
+import { getMessages, type Locale } from "@/lib/i18n";
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ locale = "en" }: { locale?: Locale }) {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     updatePassword,
     null,
   );
+  const t = getMessages(locale).auth;
 
   return (
     <div className="w-full max-w-sm">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-        Choose a new password
+        {t.resetTitle}
       </h1>
       <form action={formAction} className="mt-6 space-y-4">
         <Input
-          label="New password"
+          label={t.newPassword}
           name="password"
           type="password"
           autoComplete="new-password"
@@ -34,7 +36,7 @@ export function ResetPasswordForm() {
         )}
         <Button type="submit" disabled={pending} className="w-full">
           {pending && <Spinner />}
-          Update password
+          {t.resetSubmit}
         </Button>
       </form>
     </div>

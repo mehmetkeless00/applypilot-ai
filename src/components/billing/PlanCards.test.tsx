@@ -22,6 +22,30 @@ describe("ComingSoonAction (billing not configured)", () => {
   });
 });
 
+describe("locale rendering", () => {
+  it("shows Pro as Yakında (coming soon) in Turkish", () => {
+    const html = renderToStaticMarkup(
+      <PlanCard
+        plan="pro"
+        comingSoon
+        locale="tr"
+        action={<ComingSoonAction locale="tr" />}
+      />,
+    );
+    expect(html).toContain("Yakında");
+    expect(html).toContain("Pro — Yakında");
+    expect(html).toContain("Pro abonelikler henüz kullanıma açık değil");
+    expect(html).not.toContain("Coming soon");
+  });
+
+  it("localizes plan names and features in Turkish", () => {
+    const html = renderToStaticMarkup(<PlanCard plan="free" locale="tr" />);
+    expect(html).toContain("Ücretsiz");
+    expect(html).toContain("Ayda 3 analiz");
+    expect(html).toContain("/ay");
+  });
+});
+
 describe("PlanCard", () => {
   it("marks the Pro plan as Coming soon when billing is unavailable", () => {
     const html = renderToStaticMarkup(

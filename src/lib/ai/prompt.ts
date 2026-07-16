@@ -28,6 +28,23 @@ Factual integrity (non-negotiable, applies to resume_suggestions, tailored_summa
 
 Ground every claim in the resume. If the resume is thin, reflect that honestly in the score and analysis.`;
 
+export type AnalysisLanguage = "en" | "tr";
+
+// Appended to the system prompt when the user requests Turkish output. The
+// factual-integrity section above stays in force verbatim — this directive
+// only changes the language of the narrative output, never the facts.
+const TURKISH_DIRECTIVE = `
+
+Output language: Turkish.
+- Write fit_summary, strengths, missing_skills (skill names may stay in their industry-standard form), every suggestion field, resume_suggestions' section and reason, tailored_summary, and cover_letter in natural, professional Turkish — idiomatic product Turkish, not literal translation.
+- Never translate proper nouns or factual content: company names, product and technology names, certifications, degrees, job titles that are proper names, dates, and metrics stay exactly as written in the resume and job description.
+- resume_suggestions.original_text must remain the candidate's exact resume text, completely untranslated. improved_text must stay in the same language as original_text (it replaces text inside the resume), while reason is written in Turkish.
+- All factual-integrity rules above apply unchanged: copy every fact verbatim, never "correct" dates, never invent experience.`;
+
+export function systemPromptFor(language: AnalysisLanguage): string {
+  return language === "tr" ? SYSTEM_PROMPT + TURKISH_DIRECTIVE : SYSTEM_PROMPT;
+}
+
 interface PromptInput {
   jobTitle: string;
   company?: string;
@@ -35,6 +52,8 @@ interface PromptInput {
   resumeText?: string;
   /** Base64-encoded PDF, used when the resume was uploaded as a file. */
   resumePdfBase64?: string;
+  /** Language of the AI-generated narrative output. Defaults to English. */
+  outputLanguage?: AnalysisLanguage;
 }
 
 export function buildUserParts(input: PromptInput): Part[] {

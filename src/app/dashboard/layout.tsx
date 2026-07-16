@@ -2,6 +2,9 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { createClient } from "@/lib/supabase/server";
 import { HeaderUsage } from "@/components/billing/HeaderUsage";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export default async function DashboardLayout({
   children,
@@ -12,6 +15,8 @@ export default async function DashboardLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const locale = await getLocale();
+  const t = getMessages(locale);
 
   return (
     <div className="min-h-dvh bg-slate-50 dark:bg-slate-950">
@@ -29,30 +34,31 @@ export default async function DashboardLayout({
                 href="/dashboard"
                 className="hover:text-slate-900 dark:hover:text-slate-100"
               >
-                My analyses
+                {t.nav.myAnalyses}
               </Link>
               <Link
                 href="/dashboard/new"
                 className="hover:text-slate-900 dark:hover:text-slate-100"
               >
-                New analysis
+                {t.nav.newAnalysis}
               </Link>
               <Link
                 href="/dashboard/resumes"
                 className="hover:text-slate-900 dark:hover:text-slate-100"
               >
-                Resumes
+                {t.nav.resumes}
               </Link>
               <Link
                 href="/dashboard/billing"
                 className="hover:text-slate-900 dark:hover:text-slate-100"
               >
-                Billing
+                {t.nav.billing}
               </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
             <HeaderUsage />
+            <LanguageSwitcher locale={locale} />
             <span className="hidden text-sm text-slate-500 lg:inline dark:text-slate-400">
               {user?.email}
             </span>
@@ -61,7 +67,7 @@ export default async function DashboardLayout({
                 type="submit"
                 className="text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
               >
-                Sign out
+                {t.common.signOut}
               </button>
             </form>
           </div>

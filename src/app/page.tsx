@@ -1,88 +1,18 @@
 import Link from "next/link";
 import { ComingSoonAction, PlanCard } from "@/components/billing/PlanCards";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { SampleReport } from "@/components/marketing/SampleReport";
 import { billingAvailable } from "@/lib/billing/stripe";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
-// Fully static — no per-request auth check, so the marketing page is cached.
-// billingAvailable() reads env vars at build time, which is exactly right:
-// configuring Stripe (a deploy-time change) flips Pro from "Coming soon" to
-// purchasable on the next deploy without a code change.
+// Rendered per request (locale cookie), no auth check. billingAvailable()
+// still only reads env vars: configuring Stripe flips Pro from "Coming
+// soon" to purchasable on the next deploy without a code change.
 
-const steps = [
-  {
-    title: "Add the job",
-    description:
-      "Paste the description or import it straight from a posting URL — Greenhouse, Lever, Ashby, Workable, and many company career pages.",
-  },
-  {
-    title: "Add your resume once",
-    description:
-      "Paste it or upload a PDF. It's saved to your library with versions, so you never paste it twice.",
-  },
-  {
-    title: "Fix, re-score, apply",
-    description:
-      "Get a calibrated fit score, the gaps that matter, concrete rewrites, and a ready cover letter. Edit, re-score, and watch the number climb.",
-  },
-];
-
-const features = [
-  {
-    title: "Calibrated fit score",
-    description:
-      "A 0–100 score built on the role's real must-haves — not keyword counting, and never inflated to flatter you.",
-  },
-  {
-    title: "Evidence, not fabrication",
-    description:
-      "Every strength is backed by a line from your own resume. We never invent experience — recruiters can tell.",
-  },
-  {
-    title: "ATS keyword coverage",
-    description:
-      "See exactly which screening keywords you match, which are weak, and which are missing — with a fix for each.",
-  },
-  {
-    title: "Concrete rewrites",
-    description:
-      "Before/after rewrites of your weakest resume passages, aligned to the job's language. Copy, apply, re-score.",
-  },
-  {
-    title: "Cover letter in seconds",
-    description:
-      "A complete, ready-to-send letter grounded in your real experience — edit the tone, keep the substance.",
-  },
-  {
-    title: "Progress you can measure",
-    description:
-      "Re-score after every edit and see the delta. Your dashboard tracks every application and every improvement.",
-  },
-];
-
-const faqs = [
-  {
-    q: "Is the fit score just keyword matching?",
-    a: "No. The score weighs the role's explicit must-have qualifications against what your resume actually demonstrates. Keyword coverage is reported separately, because ATS screening and human screening are different problems.",
-  },
-  {
-    q: "Will it invent experience I don't have?",
-    a: "Never. The analysis is instructed to ground every claim in your resume, and suggestions only rephrase what's genuinely there. Fabricated resumes fail interviews — we won't write one.",
-  },
-  {
-    q: "What happens to my resume?",
-    a: "It's stored encrypted in your private account, sent to our AI provider only to run your analysis, and never sold or used to train models. You can delete resumes and analyses at any time.",
-  },
-  {
-    q: "Which job boards can I import from?",
-    a: "Greenhouse, Lever, Ashby, and Workable have first-class support, and most company career pages import via structured data. LinkedIn postings need a quick copy-paste.",
-  },
-  {
-    q: "Can I cancel Pro anytime?",
-    a: "Yes — one click in the Stripe billing portal. You keep Pro until the end of the period you paid for.",
-  },
-];
-
-export default function LandingPage() {
+export default async function LandingPage() {
+  const locale = await getLocale();
+  const t = getMessages(locale).landing;
   const proAvailable = billingAvailable();
   return (
     <div className="flex min-h-dvh flex-col bg-white dark:bg-slate-950">
@@ -95,19 +25,20 @@ export default function LandingPage() {
             href="#pricing"
             className="hidden text-sm font-semibold text-slate-700 hover:text-slate-900 sm:inline dark:text-slate-300 dark:hover:text-slate-100"
           >
-            Pricing
+            {t.pricing}
           </a>
+          <LanguageSwitcher locale={locale} />
           <Link
             href="/login"
             className="text-sm font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
           >
-            Sign in
+            {t.signIn}
           </Link>
           <Link
             href="/signup"
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
           >
-            Get started
+            {t.getStarted}
           </Link>
         </nav>
       </header>
@@ -116,27 +47,23 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="mx-auto max-w-6xl px-6 pb-16 pt-16 text-center sm:pt-20">
           <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl dark:text-slate-100">
-            Know your fit <span className="text-indigo-600">before</span> you
-            apply
+            {t.heroLead} <span className="text-indigo-600">{t.heroAccent}</span>{" "}
+            {t.heroTail}
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-slate-600 dark:text-slate-400">
-            ApplyPilot scores your resume against the job&apos;s real requirements,
-            shows you exactly what to fix, and proves it worked — your score
-            climbs as you edit. Honest analysis, no invented experience.
+            {t.heroSubtitle}
           </p>
           <div className="mt-8 flex items-center justify-center gap-4">
             <Link
               href="/signup"
               className="rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-indigo-500"
             >
-              Analyze your first application — free
+              {t.heroCta}
             </Link>
           </div>
-          <p className="mt-3 text-sm text-slate-400">
-            3 free analyses a month. No credit card required.
-          </p>
+          <p className="mt-3 text-sm text-slate-400">{t.heroNote}</p>
           <div className="mt-12">
-            <SampleReport />
+            <SampleReport locale={locale} />
           </div>
         </section>
 
@@ -144,10 +71,10 @@ export default function LandingPage() {
         <section className="border-t border-slate-100 bg-slate-50 py-16 dark:border-slate-900 dark:bg-slate-900/40">
           <div className="mx-auto max-w-6xl px-6">
             <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-              How it works
+              {t.howItWorks}
             </h2>
             <div className="mt-10 grid gap-8 sm:grid-cols-3">
-              {steps.map((step, i) => (
+              {t.steps.map((step, i) => (
                 <div key={step.title} className="text-center sm:text-left">
                   <span className="inline-flex size-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-bold text-white">
                     {i + 1}
@@ -167,10 +94,10 @@ export default function LandingPage() {
         {/* Features */}
         <section className="mx-auto max-w-6xl px-6 py-16">
           <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Everything you need to apply with confidence
+            {t.featuresTitle}
           </h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
+            {t.features.map((f) => (
               <div
                 key={f.title}
                 className="rounded-xl bg-slate-50 p-6 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800"
@@ -193,27 +120,27 @@ export default function LandingPage() {
         >
           <div className="mx-auto max-w-4xl px-6">
             <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Simple pricing
+              {t.pricingTitle}
             </h2>
             <p className="mx-auto mt-2 max-w-xl text-center text-sm text-slate-600 dark:text-slate-400">
-              {proAvailable
-                ? "Start free. Upgrade when your search gets serious. Cancel anytime."
-                : "Start free — 3 analyses a month, no credit card required."}
+              {proAvailable ? t.pricingSubtitle : t.pricingSubtitleComingSoon}
             </p>
             <div className="mt-10 grid gap-6 sm:grid-cols-2">
               <PlanCard
                 plan="free"
+                locale={locale}
                 action={
                   <Link
                     href="/signup"
                     className="inline-flex w-full items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-700 dark:hover:bg-slate-700"
                   >
-                    Start free
+                    {t.startFree}
                   </Link>
                 }
               />
               <PlanCard
                 plan="pro"
+                locale={locale}
                 comingSoon={!proAvailable}
                 action={
                   proAvailable ? (
@@ -221,10 +148,10 @@ export default function LandingPage() {
                       href="/signup"
                       className="inline-flex w-full items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
                     >
-                      Get Pro
+                      {t.getPro}
                     </Link>
                   ) : (
-                    <ComingSoonAction />
+                    <ComingSoonAction locale={locale} />
                   )
                 }
               />
@@ -235,35 +162,19 @@ export default function LandingPage() {
         {/* Trust */}
         <section className="mx-auto max-w-4xl px-6 py-16 text-center">
           <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Your resume is yours
+            {t.trustTitle}
           </h2>
           <div className="mt-8 grid gap-6 text-left sm:grid-cols-3">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                Private by default
-              </h3>
-              <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-                Row-level security isolates your data; resumes live in private
-                storage only you can access.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                Never sold, never trained on
-              </h3>
-              <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-                Your resume is used only to run your analyses. We don&apos;t
-                sell data or use it to train models.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                Delete anytime
-              </h3>
-              <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
-                Remove any resume or analysis with one click — files included.
-              </p>
-            </div>
+            {t.trust.map((item) => (
+              <div key={item.title}>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                  {item.title}
+                </h3>
+                <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
+                  {item.description}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -271,10 +182,10 @@ export default function LandingPage() {
         <section className="border-t border-slate-100 py-16 dark:border-slate-900">
           <div className="mx-auto max-w-3xl px-6">
             <h2 className="text-center text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Frequently asked questions
+              {t.faqTitle}
             </h2>
             <div className="mt-8 divide-y divide-slate-200 dark:divide-slate-800">
-              {faqs.map((faq) => (
+              {t.faqs.map((faq) => (
                 <details key={faq.q} className="group py-4">
                   <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-slate-900 dark:text-slate-100">
                     {faq.q}
@@ -296,14 +207,12 @@ export default function LandingPage() {
 
         {/* Final CTA */}
         <section className="bg-indigo-600 py-16 text-center">
-          <h2 className="text-2xl font-bold text-white">
-            Your next application deserves better than a guess
-          </h2>
+          <h2 className="text-2xl font-bold text-white">{t.finalCtaTitle}</h2>
           <Link
             href="/signup"
             className="mt-6 inline-block rounded-lg bg-white px-6 py-3 text-base font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50"
           >
-            Get your fit score — free
+            {t.finalCta}
           </Link>
         </section>
       </main>
@@ -313,10 +222,10 @@ export default function LandingPage() {
           <span>© {new Date().getFullYear()} ApplyPilot AI</span>
           <nav className="flex gap-6">
             <Link href="/privacy" className="hover:text-slate-700 dark:hover:text-slate-300">
-              Privacy
+              {t.footerPrivacy}
             </Link>
             <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-300">
-              Terms
+              {t.footerTerms}
             </Link>
           </nav>
         </div>

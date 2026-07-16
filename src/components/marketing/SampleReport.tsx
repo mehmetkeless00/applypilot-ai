@@ -1,20 +1,61 @@
+import type { Locale } from "@/lib/i18n";
+
 // Static preview of an analysis report for the landing page — pure markup,
-// no data fetching, so the page stays fully static.
+// no data fetching. Sample skill/company names stay as-is (they play the
+// role of user facts); only the illustrative narrative is localized.
 
-const strengths = [
-  { strength: "5 years of production React", evidence: "Led migration to React 18 at Datawheel" },
-  { strength: "Design-system experience", evidence: "Built and maintained a 40-component library" },
-];
+const copy = {
+  en: {
+    aria: "Example analysis report",
+    role: "Senior Frontend Engineer · Acme",
+    summary:
+      "Strong fit. Your React depth matches the core requirement; close the GraphQL gap to stand out.",
+    delta: "▲ +23 since your first draft",
+    strengthsTitle: "Strengths",
+    strengths: [
+      { strength: "5 years of production React", evidence: "Led migration to React 18 at Datawheel" },
+      { strength: "Design-system experience", evidence: "Built and maintained a 40-component library" },
+    ],
+    gapsTitle: "Gaps to close",
+    gaps: [
+      { skill: "GraphQL", importance: "important" },
+      { skill: "Terraform", importance: "nice to have" },
+    ],
+    ats: "ATS keywords",
+    matched: "14 matched",
+    weak: "3 weak",
+    missing: "2 missing",
+    extras: "+ tailored summary & cover letter",
+  },
+  tr: {
+    aria: "Örnek analiz raporu",
+    role: "Kıdemli Frontend Mühendisi · Acme",
+    summary:
+      "Güçlü uyum. React deneyiminiz temel gereksinimi karşılıyor; öne çıkmak için GraphQL eksiğini kapatın.",
+    delta: "▲ İlk taslağınızdan bu yana +23",
+    strengthsTitle: "Güçlü yönler",
+    strengths: [
+      { strength: "5 yıl üretimde React", evidence: "Datawheel'de React 18 geçişine liderlik etti" },
+      { strength: "Tasarım sistemi deneyimi", evidence: "40 bileşenlik bir kitaplık kurdu ve yönetti" },
+    ],
+    gapsTitle: "Kapatılacak eksikler",
+    gaps: [
+      { skill: "GraphQL", importance: "önemli" },
+      { skill: "Terraform", importance: "artı değer" },
+    ],
+    ats: "ATS anahtar kelimeleri",
+    matched: "14 eşleşti",
+    weak: "3 zayıf",
+    missing: "2 eksik",
+    extras: "+ kişiselleştirilmiş özet ve ön yazı",
+  },
+} as const;
 
-const gaps = [
-  { skill: "GraphQL", importance: "important" },
-  { skill: "Terraform", importance: "nice to have" },
-];
-
-export function SampleReport() {
+export function SampleReport({ locale = "en" }: { locale?: Locale }) {
+  const t = copy[locale];
   return (
     <div
-      aria-label="Example analysis report"
+      aria-label={t.aria}
       className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-6 text-left shadow-xl ring-1 ring-slate-200 sm:p-8 dark:bg-slate-900 dark:ring-slate-800"
     >
       <div className="flex items-center gap-5">
@@ -25,14 +66,13 @@ export function SampleReport() {
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-            Senior Frontend Engineer · Acme
+            {t.role}
           </p>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Strong fit. Your React depth matches the core requirement; close
-            the GraphQL gap to stand out.
+            {t.summary}
           </p>
           <p className="mt-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
-            ▲ +23 since your first draft
+            {t.delta}
           </p>
         </div>
       </div>
@@ -40,10 +80,10 @@ export function SampleReport() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Strengths
+            {t.strengthsTitle}
           </p>
           <ul className="mt-2 space-y-2">
-            {strengths.map((s) => (
+            {t.strengths.map((s) => (
               <li key={s.strength} className="text-sm">
                 <span className="font-medium text-slate-900 dark:text-slate-100">
                   {s.strength}
@@ -57,10 +97,10 @@ export function SampleReport() {
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            Gaps to close
+            {t.gapsTitle}
           </p>
           <ul className="mt-2 space-y-2">
-            {gaps.map((g) => (
+            {t.gaps.map((g) => (
               <li key={g.skill} className="flex items-center gap-2 text-sm">
                 <span className="font-medium text-slate-900 dark:text-slate-100">
                   {g.skill}
@@ -76,20 +116,18 @@ export function SampleReport() {
 
       <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-          ATS keywords
+          {t.ats}
         </span>
         <span className="rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400">
-          14 matched
+          {t.matched}
         </span>
         <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400">
-          3 weak
+          {t.weak}
         </span>
         <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
-          2 missing
+          {t.missing}
         </span>
-        <span className="ml-auto text-xs text-slate-400">
-          + tailored summary & cover letter
-        </span>
+        <span className="ml-auto text-xs text-slate-400">{t.extras}</span>
       </div>
     </div>
   );

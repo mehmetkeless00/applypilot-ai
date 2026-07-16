@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 /**
  * Onboarding is shown only until the first analysis exists. Progress is
@@ -16,33 +17,38 @@ interface Step {
   cta?: { href: string; label: string };
 }
 
-export function onboardingSteps(hasResume: boolean): Step[] {
+export function onboardingSteps(hasResume: boolean, locale: Locale = "en"): Step[] {
+  const t = getMessages(locale).onboarding;
   return [
     {
-      title: "Add your resume",
-      description:
-        "Upload a PDF or paste the text once. It's saved to your library with versions, so you never paste it twice.",
+      title: t.stepResumeTitle,
+      description: t.stepResumeDescription,
       done: hasResume,
-      cta: { href: "/dashboard/resumes", label: "Add your resume" },
+      cta: { href: "/dashboard/resumes", label: t.stepResumeCta },
     },
     {
-      title: "Add a job",
-      description:
-        "Paste a job description or import it straight from a posting URL.",
+      title: t.stepJobTitle,
+      description: t.stepJobDescription,
       done: false,
-      cta: { href: "/dashboard/new", label: "Analyze a job" },
+      cta: { href: "/dashboard/new", label: t.stepJobCta },
     },
     {
-      title: "Review your fit report",
-      description:
-        "Get a calibrated fit score, the skills gaps that matter, concrete resume rewrites, and a ready-to-send cover letter.",
+      title: t.stepReportTitle,
+      description: t.stepReportDescription,
       done: false,
     },
   ];
 }
 
-export function OnboardingChecklist({ hasResume }: { hasResume: boolean }) {
-  const steps = onboardingSteps(hasResume);
+export function OnboardingChecklist({
+  hasResume,
+  locale = "en",
+}: {
+  hasResume: boolean;
+  locale?: Locale;
+}) {
+  const t = getMessages(locale).onboarding;
+  const steps = onboardingSteps(hasResume, locale);
   const currentIndex = steps.findIndex((s) => !s.done);
 
   return (
@@ -54,11 +60,10 @@ export function OnboardingChecklist({ hasResume }: { hasResume: boolean }) {
         id="onboarding-title"
         className="text-lg font-bold text-slate-900 dark:text-slate-100"
       >
-        Get your first fit report
+        {t.title}
       </h2>
       <p className="mt-1 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-        Three quick steps to see how well you match a job — and exactly what
-        to fix before you apply.
+        {t.subtitle}
       </p>
 
       <ol className="mt-6 space-y-5">
@@ -81,7 +86,7 @@ export function OnboardingChecklist({ hasResume }: { hasResume: boolean }) {
               <div className="min-w-0">
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                   {step.title}
-                  {step.done && <span className="sr-only"> (completed)</span>}
+                  {step.done && <span className="sr-only"> {t.completed}</span>}
                 </h3>
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                   {step.description}

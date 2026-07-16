@@ -1,17 +1,21 @@
 "use client";
 
 import { BillingActionButton } from "@/components/billing/BillingActions";
-import { PLANS, PRO_UNAVAILABLE_MESSAGE } from "@/lib/billing/plans";
+import { PLANS } from "@/lib/billing/plans";
+import { getMessages, type Locale } from "@/lib/i18n";
 
 /** Shown in place of a plain error when a request hits the plan limit. */
 export function UpgradeCard({
   message,
   billingAvailable = true,
+  locale = "en",
 }: {
   message: string;
   /** When Stripe is not configured, offer no checkout — Pro is "coming soon". */
   billingAvailable?: boolean;
+  locale?: Locale;
 }) {
+  const t = getMessages(locale).billing;
   return (
     <div
       role="alert"
@@ -23,19 +27,17 @@ export function UpgradeCard({
       {billingAvailable ? (
         <>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-            Pro gives you {PLANS.pro.analysesPerMonth} analyses a month — enough
-            to tailor and re-score every application in a serious search.
+            {t.quotaUpgradeBody(PLANS.pro.analysesPerMonth)}
           </p>
           <div className="mt-4">
-            <BillingActionButton endpoint="/api/billing/checkout">
-              Upgrade to Pro — ${PLANS.pro.priceMonthly}/mo
+            <BillingActionButton endpoint="/api/billing/checkout" locale={locale}>
+              {t.upgradeCta(PLANS.pro.priceMonthly)}
             </BillingActionButton>
           </div>
         </>
       ) : (
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          {PRO_UNAVAILABLE_MESSAGE} Your limit resets on the 1st of next month
-          (UTC).
+          {t.proUnavailable} {t.quotaResetNote}
         </p>
       )}
     </div>

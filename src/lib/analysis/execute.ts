@@ -12,6 +12,7 @@ import {
 } from "@/lib/billing/usage";
 import { createResumeWithVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
 import { extractPdfText } from "@/lib/resumes/extract";
+import { DEFAULT_LOCALE, getMessages, type Locale } from "@/lib/i18n";
 
 // Shared analysis execution used by POST /api/analyze and the re-score
 // route: plan limits, resume resolution, the AI call, and the insert.
@@ -38,6 +39,10 @@ export interface ExecuteAnalysisInput {
   resumeId?: string;
   saveResumeTitle?: string;
   rescoredFrom?: string;
+  /** Language of the AI-generated output (stored on the analysis). */
+  outputLanguage?: "en" | "tr";
+  /** UI locale for user-facing error messages. */
+  locale?: Locale;
 }
 
 export async function executeAnalysis(
@@ -45,6 +50,7 @@ export async function executeAnalysis(
   user: User,
   input: ExecuteAnalysisInput,
 ): Promise<{ id: string }> {
+  const t = getMessages(input.locale ?? DEFAULT_LOCALE);
   // Monthly plan limit (free 3 / pro 50), reset on UTC calendar months.
   const { data: profile } = await supabase
     .from("profiles")
@@ -59,8 +65,8 @@ export async function executeAnalysis(
   if (monthCount >= monthlyLimit) {
     throw new AnalysisRequestError(
       plan === "free"
-        ? `You've used all ${monthlyLimit} free analyses this month. Upgrade to Pro for ${PLANS.pro.analysesPerMonth}/month.`
-        : `You've used all ${monthlyLimit} Pro analyses this month. Your limit resets on the 1st.`,
+        ? t.errors.quotaFree(monthlyLimit, PLANS.pro.analysesPerMonth)
+        : t.errors.quotaPro(monthlyLimit),
       402,
     );
   }
@@ -68,10 +74,7 @@ export async function executeAnalysis(
   // Simple per-user anti-abuse rate limit.
   const hourCount = await countUsageSince(supabase, "analysis", hourAgo());
   if (hourCount >= ANALYSES_PER_HOUR) {
-    throw new AnalysisRequestError(
-      "Rate limit reached — try again in an hour.",
-      429,
-    );
+    throw new AnalysisRequestError(t.errors.rateLimited, 429);
   }
 
   // Resolve the resume source: a saved resume's latest version, or the
@@ -84,7 +87,7 @@ export async function executeAnalysis(
   if (input.resumeId) {
     const version = await fetchLatestVersion(supabase, input.resumeId);
     if (!version) {
-      throw new AnalysisRequestError("That saved resume wasn't found.", 404);
+      throw new AnalysisRequestError(t.errors.savedResumeNotFound, 404);
     }
     if (version.content) {
       // Parsed/edited text is preferred; the original PDF stays in storage
@@ -105,21 +108,18 @@ export async function executeAnalysis(
   let parsedPdfText: string | null = null;
   if (resumeFilePath) {
     if (!resumeFilePath.startsWith(`${user.id}/`)) {
-      throw new AnalysisRequestError("Invalid resume file", 400);
+      throw new AnalysisRequestError(t.errors.invalidResumeFile, 400);
     }
     const { data: file, error: downloadError } = await supabase.storage
       .from("resumes")
       .download(resumeFilePath);
     if (downloadError || !file) {
-      throw new AnalysisRequestError("Could not read the uploaded resume", 400);
+      throw new AnalysisRequestError(t.errors.resumeUnreadable, 400);
     }
     const bytes = Buffer.from(await file.arrayBuffer());
     // The bucket's MIME restriction trusts the client; verify the content.
     if (!bytes.subarray(0, 5).toString("latin1").startsWith("%PDF-")) {
-      throw new AnalysisRequestError(
-        "The uploaded file isn't a valid PDF. Re-upload your resume.",
-        400,
-      );
+      throw new AnalysisRequestError(t.errors.invalidPdf, 400);
     }
     resumePdfBase64 = bytes.toString("base64");
     // Best-effort text: feeds the anti-fabrication corpus and, when the
@@ -145,12 +145,14 @@ export async function executeAnalysis(
     }
   }
 
+  const outputLanguage = input.outputLanguage ?? "en";
   const { result: rawResult, servedBy } = await analyze({
     jobTitle: input.jobTitle,
     company: input.company,
     jobDescription: input.jobDescription,
     resumeText: resumePdfBase64 ? undefined : resumeText,
     resumePdfBase64,
+    outputLanguage,
   });
 
   // Deterministic anti-fabrication guard: drops suggestions that altered
@@ -172,6 +174,7 @@ export async function executeAnalysis(
       resume_id: resumeId,
       resume_version_id: resumeVersionId,
       rescored_from: input.rescoredFrom ?? null,
+      output_language: outputLanguage,
       fit_score: result.fit_score,
       fit_summary: result.fit_summary,
       missing_skills: result.missing_skills,
@@ -187,10 +190,7 @@ export async function executeAnalysis(
 
   if (insertError || !row) {
     console.error("Failed to save analysis:", insertError);
-    throw new AnalysisRequestError(
-      "Analysis succeeded but could not be saved. Try again.",
-      500,
-    );
+    throw new AnalysisRequestError(t.errors.saveFailed, 500);
   }
 
   await recordUsage(supabase, user.id, "analysis");
@@ -199,7 +199,11 @@ export async function executeAnalysis(
 }
 
 /** Maps execution errors (request-level and AI-provider) to responses. */
-export function analysisErrorResponse(err: unknown): NextResponse {
+export function analysisErrorResponse(
+  err: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): NextResponse {
+  const t = getMessages(locale);
   if (err instanceof AnalysisRequestError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
@@ -211,10 +215,7 @@ export function analysisErrorResponse(err: unknown): NextResponse {
     );
   }
   if (err instanceof AnalysisRefusedError) {
-    return NextResponse.json(
-      { error: "We couldn't analyze this content. Check that the job description and resume are standard application materials." },
-      { status: 422 },
-    );
+    return NextResponse.json({ error: t.errors.refused }, { status: 422 });
   }
   if (err instanceof ApiError) {
     if (err.status === 401 || err.status === 403) {
@@ -225,26 +226,14 @@ export function analysisErrorResponse(err: unknown): NextResponse {
       );
     }
     if (err.status === 429) {
-      return NextResponse.json(
-        { error: "The AI service is busy — try again in a minute." },
-        { status: 429 },
-      );
+      return NextResponse.json({ error: t.errors.aiBusy }, { status: 429 });
     }
     console.error("Gemini API error:", err.status, err.message);
-    return NextResponse.json(
-      { error: "The AI service returned an error. Try again shortly." },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: t.errors.aiError }, { status: 502 });
   }
   if (err instanceof TypeError && err.message.includes("fetch")) {
-    return NextResponse.json(
-      { error: "Could not reach the AI service. Try again." },
-      { status: 502 },
-    );
+    return NextResponse.json({ error: t.errors.aiUnreachable }, { status: 502 });
   }
   console.error("Unexpected analyze error:", err);
-  return NextResponse.json(
-    { error: "Something went wrong. Try again." },
-    { status: 500 },
-  );
+  return NextResponse.json({ error: t.errors.generic }, { status: 500 });
 }

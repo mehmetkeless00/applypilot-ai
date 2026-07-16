@@ -271,6 +271,27 @@ describe("POST /api/analyze", () => {
     expect(JSON.stringify(insert.resume_suggestions)).not.toMatch(/assumed/i);
   });
 
+  it("persists the requested output language and passes it to the model", async () => {
+    const res = await POST(makeRequest({ ...validBody, outputLanguage: "tr" }));
+    expect(res.status).toBe(200);
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.output_language).toBe("tr");
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("tr");
+  });
+
+  it("defaults the output language to English when none is sent", async () => {
+    const res = await POST(makeRequest(validBody));
+    expect(res.status).toBe(200);
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.output_language).toBe("en");
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("en");
+  });
+
+  it("rejects unknown output languages", async () => {
+    const res = await POST(makeRequest({ ...validBody, outputLanguage: "de" }));
+    expect(res.status).toBe(400);
+  });
+
   it("maps a refusal to a 422 with a friendly message", async () => {
     analyzeMock.mockRejectedValue(new AnalysisRefusedError());
     const res = await POST(makeRequest(validBody));
