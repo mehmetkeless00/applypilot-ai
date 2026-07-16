@@ -6,8 +6,9 @@ import { Badge } from "@/components/ui/Badge";
 import { ResumeEditor } from "@/components/resumes/ResumeEditor";
 import { ResumeTitleForm } from "@/components/resumes/ResumeTitleForm";
 import { DeleteResumeButton } from "@/components/resumes/DeleteResumeButton";
+import { VersionCompare } from "@/components/resumes/VersionCompare";
 import { loadPdfForResume } from "@/lib/resumes/resumes";
-import { formatDate, scoreTone } from "@/lib/utils";
+import { formatDate, resumeSourceLabel, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import type { Analysis, Resume, ResumeVersion } from "@/lib/types";
 
@@ -173,16 +174,47 @@ export default async function ResumePage({
 
       {versions.length > 1 && (
         <Card>
+          <CardTitle>Compare versions</CardTitle>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            See exactly what changed between two versions.
+          </p>
+          <div className="mt-4">
+            <VersionCompare
+              versions={versions.map((v) => ({
+                id: v.id,
+                version: v.version,
+                source: v.source,
+                created_at: v.created_at,
+                content: v.content,
+              }))}
+            />
+          </div>
+        </Card>
+      )}
+
+      {versions.length > 1 && (
+        <Card>
           <CardTitle>Version history</CardTitle>
           <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
             {versions.map((v) => (
-              <li key={v.id} className="flex items-center gap-3 py-2.5 text-sm">
+              <li
+                key={v.id}
+                className="flex flex-wrap items-center gap-3 py-2.5 text-sm"
+              >
                 <Badge tone={v.id === latest.id ? "indigo" : "slate"}>
                   v{v.version}
                 </Badge>
                 <span className="text-slate-600 dark:text-slate-400">
-                  {v.source === "pdf" ? "PDF upload" : "Text"}
+                  {resumeSourceLabel(v.source)}
                 </span>
+                {v.source_analysis_id && (
+                  <Link
+                    href={`/dashboard/analysis/${v.source_analysis_id}`}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+                  >
+                    View analysis
+                  </Link>
+                )}
                 <span className="ml-auto text-slate-400">
                   {formatDate(v.created_at)}
                 </span>

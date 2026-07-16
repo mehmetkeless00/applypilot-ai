@@ -11,10 +11,13 @@ import { CopyableText } from "@/components/analysis/CopyableText";
 import { DeleteAnalysisButton } from "@/components/analysis/DeleteAnalysisButton";
 import { ExportButtons } from "@/components/analysis/ExportButtons";
 import { RescoreButton } from "@/components/analysis/RescoreButton";
-import { ScoreDelta } from "@/components/analysis/ScoreDelta";
+import {
+  ScoreComparison,
+  type ComparisonRun,
+} from "@/components/analysis/ScoreComparison";
 import { formatDate } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
-import type { Analysis } from "@/lib/types";
+import type { Analysis, AtsKeyword } from "@/lib/types";
 
 export const metadata = { title: "Analysis" };
 
@@ -36,15 +39,48 @@ export default async function AnalysisPage({
   const analysis = decodeAnalysisMetadata(data as Analysis);
   const slug = analysis.job_title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-  // When this run re-scored an earlier one, fetch it for the delta display.
-  let previous: { id: string; fit_score: number } | null = null;
+  // When this run re-scored an earlier one, fetch it (plus the resume
+  // version numbers involved) for the comparison card.
+  let comparison: { previous: ComparisonRun; current: ComparisonRun } | null =
+    null;
   if (analysis.rescored_from) {
     const { data: prev } = await supabase
       .from("analyses")
-      .select("id, fit_score")
+      .select("id, fit_score, ats_keywords, resume_version_id, created_at")
       .eq("id", analysis.rescored_from)
       .maybeSingle();
-    previous = prev ?? null;
+    if (prev) {
+      const versionIds = [prev.resume_version_id, analysis.resume_version_id]
+        .filter((v): v is string => Boolean(v));
+      const versionNumbers = new Map<string, number>();
+      if (versionIds.length > 0) {
+        const { data: versions } = await supabase
+          .from("resume_versions")
+          .select("id, version")
+          .in("id", versionIds);
+        for (const v of versions ?? []) versionNumbers.set(v.id, v.version);
+      }
+      comparison = {
+        previous: {
+          id: prev.id,
+          score: prev.fit_score,
+          atsKeywords: (prev.ats_keywords ?? []) as AtsKeyword[],
+          createdAt: prev.created_at,
+          resumeVersion: prev.resume_version_id
+            ? (versionNumbers.get(prev.resume_version_id) ?? null)
+            : null,
+        },
+        current: {
+          id: analysis.id,
+          score: analysis.fit_score,
+          atsKeywords: analysis.ats_keywords ?? [],
+          createdAt: analysis.created_at,
+          resumeVersion: analysis.resume_version_id
+            ? (versionNumbers.get(analysis.resume_version_id) ?? null)
+            : null,
+        },
+      };
+    }
   }
 
   return (
@@ -79,18 +115,18 @@ export default async function AnalysisPage({
         <ScoreGauge score={analysis.fit_score} />
         <div>
           <CardTitle>Fit assessment</CardTitle>
-          {previous && (
-            <ScoreDelta
-              previousId={previous.id}
-              previousScore={previous.fit_score}
-              currentScore={analysis.fit_score}
-            />
-          )}
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {analysis.fit_summary}
           </p>
         </div>
       </Card>
+
+      {comparison && (
+        <ScoreComparison
+          previous={comparison.previous}
+          current={comparison.current}
+        />
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Strengths strengths={analysis.strengths} />
@@ -99,7 +135,11 @@ export default async function AnalysisPage({
 
       <AtsCoverage keywords={analysis.ats_keywords ?? []} />
 
-      <ResumeSuggestions suggestions={analysis.resume_suggestions ?? []} />
+      <ResumeSuggestions
+        suggestions={analysis.resume_suggestions ?? []}
+        analysisId={analysis.id}
+        hasSavedResume={Boolean(analysis.resume_id)}
+      />
 
       <Card>
         <CardTitle>Tailored professional summary</CardTitle>

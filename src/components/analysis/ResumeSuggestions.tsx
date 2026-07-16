@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ApplySuggestionButton } from "@/components/analysis/ApplySuggestion";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardTitle } from "@/components/ui/Card";
@@ -28,13 +29,28 @@ function CopyImprovedButton({ text }: { text: string }) {
   );
 }
 
-export function ResumeSuggestions({ suggestions }: { suggestions: ResumeSuggestion[] }) {
+export function ResumeSuggestions({
+  suggestions,
+  analysisId,
+  hasSavedResume = false,
+}: {
+  suggestions: ResumeSuggestion[];
+  analysisId?: string;
+  hasSavedResume?: boolean;
+}) {
   // Analyses created before this feature have no suggestions — hide the section.
   if (suggestions.length === 0) return null;
+  const canApply = Boolean(analysisId) && hasSavedResume;
 
   return (
     <Card>
       <CardTitle>Resume Improvement Suggestions</CardTitle>
+      {!canApply && (
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          Run analyses with a saved resume to apply suggestions in one click —
+          for now, copy the improved text into your resume manually.
+        </p>
+      )}
       <ul className="mt-4 space-y-6">
         {suggestions.map((s, i) => (
           <li
@@ -70,7 +86,14 @@ export function ResumeSuggestions({ suggestions }: { suggestions: ResumeSuggesti
             <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">
               {s.reason}
             </p>
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap items-start gap-3">
+              {canApply && (
+                <ApplySuggestionButton
+                  analysisId={analysisId!}
+                  suggestionIndex={i}
+                  suggestion={s}
+                />
+              )}
               <CopyImprovedButton text={s.improved_text} />
             </div>
           </li>

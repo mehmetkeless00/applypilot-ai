@@ -7,6 +7,7 @@ const {
   storageChain,
   insertPayloads,
   usageInserts,
+  usageState,
   insertSingleMock,
   analyzeMock,
 } = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const {
   storageChain: { bytes: null as Buffer | null },
   insertPayloads: [] as Record<string, unknown>[],
   usageInserts: [] as Record<string, unknown>[],
+  usageState: { count: 0 },
   insertSingleMock: vi.fn(),
   analyzeMock: vi.fn(),
 }));
@@ -36,7 +38,7 @@ vi.mock("@/lib/supabase/server", () => ({
       if (table === "usage_events") {
         return {
           select: () => ({
-            eq: () => ({ gte: async () => ({ count: 0 }) }),
+            eq: () => ({ gte: async () => ({ count: usageState.count }) }),
           }),
           insert: (payload: Record<string, unknown>) => {
             usageInserts.push(payload);
@@ -123,6 +125,7 @@ beforeEach(() => {
   versionChain.version = null;
   storageChain.bytes = null;
   usageInserts.length = 0;
+  usageState.count = 0;
   insertPayloads.length = 0;
   insertSingleMock.mockResolvedValue({ data: { id: "analysis-2" }, error: null });
   analyzeMock.mockReset();
@@ -165,6 +168,17 @@ describe("POST /api/analyses/[id]/rescore", () => {
     const res = await POST(makeRequest(), ctx);
     expect(res.status).toBe(200);
     expect(usageInserts).toEqual([{ user_id: "user-123", kind: "analysis" }]);
+  });
+
+  it("returns 402 when quota is exhausted without touching resume data", async () => {
+    usageState.count = 50; // pro monthly limit
+    const res = await POST(makeRequest(), ctx);
+    expect(res.status).toBe(402);
+    // No new analysis, no quota consumed, nothing deleted — a resume
+    // version created just before this call stays intact.
+    expect(insertPayloads).toHaveLength(0);
+    expect(usageInserts).toHaveLength(0);
+    expect(analyzeMock).not.toHaveBeenCalled();
   });
 
   it("uses the latest saved-resume version when linked", async () => {

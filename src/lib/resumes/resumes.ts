@@ -8,7 +8,11 @@ import { extractPdfText } from "./extract";
 export interface NewVersionInput {
   content?: string;
   filePath?: string;
-  source: "paste" | "pdf";
+  source: "paste" | "pdf" | "applied_suggestion";
+  /** Traceability, required when source is 'applied_suggestion'. */
+  sourceAnalysisId?: string;
+  sourceSuggestion?: number;
+  previousVersionId?: string;
 }
 
 export const MAX_RESUME_PDF_BYTES = 10 * 1024 * 1024;
@@ -113,6 +117,9 @@ export async function addResumeVersion(
       content: input.content ?? null,
       file_path: input.filePath ?? null,
       source: input.source,
+      source_analysis_id: input.sourceAnalysisId ?? null,
+      source_suggestion: input.sourceSuggestion ?? null,
+      previous_version_id: input.previousVersionId ?? null,
     })
     .select("id")
     .single();

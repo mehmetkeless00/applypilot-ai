@@ -57,7 +57,18 @@ Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every e
 
 ## Re-score loop
 
-Every analysis has a **Re-score** button: it re-runs the same job against the *latest* version of the linked saved resume (or the original resume text for legacy analyses) and records the lineage in `analyses.rescored_from` (migration `0006_rescore.sql`). Re-scored analyses show the score delta against the previous run, resume pages show a score history across versions, and the dashboard shows aggregate stats. Re-scores count toward plan limits like any analysis.
+Every analysis has a **Re-score** button: it re-runs the same job against the *latest* version of the linked saved resume (or the original resume text for legacy analyses) and records the lineage in `analyses.rescored_from` (migration `0006_rescore.sql`). Re-scored analyses show a comparison card against the previous run — score delta, resume versions, dates, and ATS keyword movement (matched/weak/missing, newly matched, regressed) — resume pages show a score history across versions, and the dashboard shows aggregate stats. Re-scores count toward plan limits like any analysis.
+
+## Guided resume improvement (apply a suggestion)
+
+Each resume improvement suggestion on an analysis has an **Apply to resume** action (analyses run against a saved resume only). The flow is deliberately conservative:
+
+1. **Preview** — a dialog shows before/after text, the reason, and a warning that only the shown text changes. Nothing happens without explicit confirmation.
+2. **Apply** — the server (`/api/analyses/[id]/apply-suggestion`) re-reads the suggestion from the stored analysis (never from the client), re-runs the factual-integrity guard against the *current* resume text, and requires the original text to appear **exactly once** in the latest version. Anything else — text gone, text duplicated, resume changed since the analysis, PDF-only version — returns a clear conflict message pointing to manual review instead of guessing.
+3. **New version** — a successful apply creates the next immutable resume version with `source='applied_suggestion'` and full traceability (`source_analysis_id`, `source_suggestion`, `previous_version_id` — migration `0009_applied_suggestions.sql`). Previous versions and the original PDF are never modified. A partial unique index makes double-submits idempotent. Creating a version consumes **no** analysis quota.
+4. **Re-score** — the success message offers "Re-score with version X" (explicitly labeled as using 1 analysis from the monthly limit). If quota is exhausted, the new version is kept and the limit is explained.
+
+The resume page also gets a **Compare versions** tool: a safe, React-rendered line diff (no `dangerouslySetInnerHTML`) between any two text versions, with each version labeled by how it was created (Uploaded PDF / Manual edit / Applied suggestion) and linked to its source analysis where applicable.
 
 ## Job URL import
 

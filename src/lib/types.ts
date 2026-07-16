@@ -31,7 +31,7 @@ export interface ResumeSuggestion {
   impact: SuggestionImpact;
 }
 
-export type ResumeSource = "paste" | "pdf";
+export type ResumeSource = "paste" | "pdf" | "applied_suggestion";
 
 export interface Resume {
   id: string;
@@ -50,6 +50,10 @@ export interface ResumeVersion {
   file_path: string | null;
   source: ResumeSource;
   created_at: string;
+  /** Traceability for source 'applied_suggestion' (null on other sources). */
+  source_analysis_id?: string | null;
+  source_suggestion?: number | null;
+  previous_version_id?: string | null;
 }
 
 export interface Analysis {
