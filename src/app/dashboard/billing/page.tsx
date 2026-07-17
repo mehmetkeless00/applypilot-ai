@@ -42,13 +42,16 @@ export default async function BillingPage({
   const available = billingAvailable();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl animate-rise space-y-6">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
         {t.title}
       </h1>
 
       {checkout === "success" && (
-        <p className="rounded-lg bg-green-50 p-3 text-sm text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400">
+        <p
+          role="status"
+          className="rounded-lg bg-green-50 p-3 text-sm text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400"
+        >
           {t.checkoutSuccess}
         </p>
       )}
@@ -58,7 +61,10 @@ export default async function BillingPage({
         </p>
       )}
       {summary.warning && (
-        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-400">
+        <p
+          role="alert"
+          className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400"
+        >
           {t.paymentWarning}
         </p>
       )}

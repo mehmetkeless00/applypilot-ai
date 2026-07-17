@@ -4,14 +4,16 @@ import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
 import { getLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
+// latin-ext covers Turkish glyphs (ş, ğ, İ …) so both locales render in
+// the brand font instead of falling back mid-word.
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 export const metadata: Metadata = {

@@ -56,22 +56,22 @@ export function SampleReport({ locale = "en" }: { locale?: Locale }) {
   return (
     <div
       aria-label={t.aria}
-      className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-6 text-left shadow-xl ring-1 ring-slate-200 sm:p-8 dark:bg-slate-900 dark:ring-slate-800"
+      className="mx-auto w-full max-w-2xl rounded-2xl bg-white p-6 text-left shadow-2xl shadow-indigo-950/40 ring-1 ring-slate-900/10 sm:p-8"
     >
       <div className="flex items-center gap-5">
-        <div className="flex size-20 shrink-0 items-center justify-center rounded-full ring-8 ring-green-100 dark:ring-green-500/20">
-          <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+        <div className="flex size-20 shrink-0 items-center justify-center rounded-full ring-8 ring-green-100">
+          <span className="text-2xl font-bold text-green-600">
             84
           </span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <p className="text-sm font-semibold text-slate-900">
             {t.role}
           </p>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-sm text-slate-500">
             {t.summary}
           </p>
-          <p className="mt-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
+          <p className="mt-1.5 text-xs font-semibold text-green-600">
             {t.delta}
           </p>
         </div>
@@ -85,10 +85,10 @@ export function SampleReport({ locale = "en" }: { locale?: Locale }) {
           <ul className="mt-2 space-y-2">
             {t.strengths.map((s) => (
               <li key={s.strength} className="text-sm">
-                <span className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="font-medium text-slate-900">
                   {s.strength}
                 </span>
-                <span className="block text-xs text-slate-500 dark:text-slate-400">
+                <span className="block text-xs text-slate-500">
                   “{s.evidence}”
                 </span>
               </li>
@@ -102,10 +102,10 @@ export function SampleReport({ locale = "en" }: { locale?: Locale }) {
           <ul className="mt-2 space-y-2">
             {t.gaps.map((g) => (
               <li key={g.skill} className="flex items-center gap-2 text-sm">
-                <span className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="font-medium text-slate-900">
                   {g.skill}
                 </span>
-                <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400">
+                <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700 ring-1 ring-inset ring-amber-600/20">
                   {g.importance}
                 </span>
               </li>
@@ -114,17 +114,17 @@ export function SampleReport({ locale = "en" }: { locale?: Locale }) {
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
           {t.ats}
         </span>
-        <span className="rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 dark:bg-green-500/10 dark:text-green-400">
+        <span className="rounded-md bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
           {t.matched}
         </span>
-        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400">
+        <span className="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
           {t.weak}
         </span>
-        <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20 dark:bg-red-500/10 dark:text-red-400">
+        <span className="rounded-md bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
           {t.missing}
         </span>
         <span className="ml-auto text-xs text-slate-400">{t.extras}</span>

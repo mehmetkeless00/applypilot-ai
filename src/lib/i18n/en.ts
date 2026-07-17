@@ -22,6 +22,8 @@ export const en = {
     billing: "Billing",
     usageTitle: "Analyses used this month",
     usageThisMonth: (used: number, limit: number) => `${used}/${limit} this month`,
+    menu: "Menu",
+    closeMenu: "Close menu",
   },
   landing: {
     pricing: "Pricing",
@@ -33,6 +35,7 @@ export const en = {
     heroSubtitle:
       "ApplyPilot scores your resume against the job's real requirements, shows you exactly what to fix, and proves it worked — your score climbs as you edit. Honest analysis, no invented experience.",
     heroCta: "Analyze your first application — free",
+    heroSecondaryCta: "See how it works",
     heroNote: "3 free analyses a month. No credit card required.",
     howItWorks: "How it works",
     steps: [
@@ -305,6 +308,7 @@ export const en = {
     importedFrom: (url: string) => `Imported from ${url} — review and edit below.`,
     jobDescriptionPlaceholder: "Paste the full job description here…",
     yourResume: "Your resume",
+    stepJob: "The job",
     tabSaved: "Saved resume",
     tabPaste: "Paste text",
     tabUpload: "Upload PDF",

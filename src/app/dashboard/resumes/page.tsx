@@ -25,7 +25,7 @@ export default async function ResumesPage() {
   const t = getMessages(locale).resumes;
 
   return (
-    <div className="space-y-8">
+    <div className="animate-rise space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
           {t.title}
@@ -57,12 +57,14 @@ export default async function ResumesPage() {
                     <p className="truncate font-semibold text-slate-900 dark:text-slate-100">
                       {resume.title}
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {t.versions(versions)}
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-500 dark:text-slate-400">
+                      <span>{t.versions(versions)}</span>
+                      <span aria-hidden>·</span>
+                      <span>{t.updatedOn(formatDate(resume.updated_at, locale))}</span>
                     </p>
                   </div>
-                  <span className="shrink-0 text-sm text-slate-400">
-                    {t.updatedOn(formatDate(resume.updated_at, locale))}
+                  <span aria-hidden className="shrink-0 text-slate-400">
+                    →
                   </span>
                 </Link>
               </li>

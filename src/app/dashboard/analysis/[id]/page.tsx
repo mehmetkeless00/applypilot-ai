@@ -15,7 +15,8 @@ import {
   ScoreComparison,
   type ComparisonRun,
 } from "@/components/analysis/ScoreComparison";
-import { formatDate } from "@/lib/utils";
+import { Badge } from "@/components/ui/Badge";
+import { formatDate, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import { getMessages } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
@@ -87,8 +88,11 @@ export default async function AnalysisPage({
     }
   }
 
+  const tone = scoreTone(analysis.fit_score);
+  const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
+
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link
@@ -100,9 +104,14 @@ export default async function AnalysisPage({
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {analysis.job_title}
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {analysis.company || t.dashboard.companyUnknown} ·{" "}
-            {formatDate(analysis.created_at, locale)}
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+            <span>
+              {analysis.company || t.dashboard.companyUnknown} ·{" "}
+              {formatDate(analysis.created_at, locale)}
+            </span>
+            {analysis.output_language && analysis.output_language !== locale && (
+              <Badge tone="slate">{analysis.output_language.toUpperCase()}</Badge>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -121,9 +130,12 @@ export default async function AnalysisPage({
         </div>
       </div>
 
-      <Card className="flex flex-col items-center gap-6 sm:flex-row">
-        <ScoreGauge score={analysis.fit_score} locale={locale} />
-        <div>
+      <Card className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+        <div className="flex shrink-0 flex-col items-center gap-2">
+          <ScoreGauge score={analysis.fit_score} locale={locale} />
+          <Badge tone={toneToBadge[tone]}>{t.dashboard.fit[tone]}</Badge>
+        </div>
+        <div className="min-w-0">
           <CardTitle>{t.analysis.fitAssessment}</CardTitle>
           <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
             {analysis.fit_summary}

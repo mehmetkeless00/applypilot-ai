@@ -16,7 +16,7 @@ export default async function NewAnalysisPage() {
   const t = getMessages(locale).newAnalysis;
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-3xl animate-rise">
       <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
         {t.title}
       </h1>

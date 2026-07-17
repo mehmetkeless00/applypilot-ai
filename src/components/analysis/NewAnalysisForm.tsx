@@ -20,6 +20,31 @@ export interface SavedResumeOption {
   title: string;
 }
 
+function StepHeading({
+  step,
+  title,
+  right,
+}: {
+  step: number;
+  title: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <h2 className="flex items-center gap-2.5 text-base font-semibold text-slate-900 dark:text-slate-100">
+        <span
+          aria-hidden
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white"
+        >
+          {step}
+        </span>
+        {title}
+      </h2>
+      {right}
+    </div>
+  );
+}
+
 function ModeTabs<T extends string>({
   modes,
   labels,
@@ -206,8 +231,9 @@ export function NewAnalysisForm({
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+  const jobStep = (
+    <section>
+      <StepHeading step={2} title={t.stepJob} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label={t.jobTitle}
@@ -302,11 +328,15 @@ export function NewAnalysisForm({
         )}
       </div>
 
-      <div>
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            {t.yourResume}
-          </span>
+    </section>
+  );
+
+  const resumeStep = (
+    <section>
+      <StepHeading
+        step={1}
+        title={t.yourResume}
+        right={
           <ModeTabs
             modes={
               hasSavedResumes
@@ -318,11 +348,14 @@ export function NewAnalysisForm({
             onChange={setResumeMode}
             disabled={submitting}
           />
-        </div>
+        }
+      />
 
+      <div>
         {resumeMode === "saved" ? (
           <div>
             <select
+              aria-label={t.yourResume}
               value={selectedResumeId}
               onChange={(e) => setSelectedResumeId(e.target.value)}
               disabled={submitting}
@@ -400,10 +433,15 @@ export function NewAnalysisForm({
           </div>
         )}
       </div>
+    </section>
+  );
 
-      <div className="max-w-xs">
+  const languageStep = (
+    <section className="max-w-xs">
+      <StepHeading step={3} title={t.outputLanguage} />
+      <div>
         <label className="flex flex-col gap-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-          {t.outputLanguage}
+          <span className="sr-only">{t.outputLanguage}</span>
           <select
             name="outputLanguage"
             value={outputLanguage}
@@ -422,6 +460,14 @@ export function NewAnalysisForm({
           {t.outputLanguageHint}
         </p>
       </div>
+    </section>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {resumeStep}
+      {jobStep}
+      {languageStep}
 
       {error &&
         (limitReached ? (

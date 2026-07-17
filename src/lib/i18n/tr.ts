@@ -23,6 +23,8 @@ export const tr: Messages = {
     billing: "Abonelik",
     usageTitle: "Bu ay kullanılan analizler",
     usageThisMonth: (used, limit) => `Bu ay ${used}/${limit}`,
+    menu: "Menü",
+    closeMenu: "Menüyü kapat",
   },
   landing: {
     pricing: "Fiyatlandırma",
@@ -34,6 +36,7 @@ export const tr: Messages = {
     heroSubtitle:
       "ApplyPilot, CV'nizi ilanın gerçek gereksinimleriyle puanlar, tam olarak neyi düzeltmeniz gerektiğini gösterir ve işe yaradığını kanıtlar — siz düzelttikçe puanınız yükselir. Dürüst analiz, uydurma deneyim yok.",
     heroCta: "İlk başvurunuzu analiz edin — ücretsiz",
+    heroSecondaryCta: "Nasıl çalıştığını görün",
     heroNote: "Ayda 3 ücretsiz analiz. Kredi kartı gerekmez.",
     howItWorks: "Nasıl çalışır?",
     steps: [
@@ -306,6 +309,7 @@ export const tr: Messages = {
     importedFrom: (url) => `${url} adresinden aktarıldı — aşağıda inceleyip düzenleyin.`,
     jobDescriptionPlaceholder: "İlan metninin tamamını buraya yapıştırın…",
     yourResume: "CV'niz",
+    stepJob: "İş ilanı",
     tabSaved: "Kayıtlı CV",
     tabPaste: "Metin yapıştır",
     tabUpload: "PDF yükle",
