@@ -94,7 +94,10 @@ describe("analyze", () => {
     await analyze(input);
     const system = generateMock.mock.calls[0][0].config.systemInstruction;
     expect(system).toContain("Factual integrity");
-    expect(system).toContain("Never reason about the current date");
+    // Recency comes only from the supplied <current_date>, never the
+    // model's own assumption — and dates are never altered because of it.
+    expect(system).toContain("Judge recency only against that date");
+    expect(system).toContain('Never alter, doubt, or "correct" a resume date');
     expect(system).toMatch(/never write "assumed"/i);
   });
 

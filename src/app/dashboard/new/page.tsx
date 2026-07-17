@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { NewAnalysisForm } from "@/components/analysis/NewAnalysisForm";
 import { billingAvailable } from "@/lib/billing/stripe";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 
-export const metadata = { title: "New analysis" };
+export const generateMetadata = () => pageTitle("newAnalysis");
 
 export default async function NewAnalysisPage() {
   const supabase = await createClient();

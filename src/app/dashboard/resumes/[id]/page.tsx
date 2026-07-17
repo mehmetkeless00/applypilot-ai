@@ -11,12 +11,12 @@ import { loadPdfForResume } from "@/lib/resumes/resumes";
 import { formatDate, resumeSourceLabel, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 import type { Analysis, Resume, ResumeVersion } from "@/lib/types";
 
 const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
 
-export const metadata = { title: "Resume" };
+export const generateMetadata = () => pageTitle("resume");
 
 export default async function ResumePage({
   params,

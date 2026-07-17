@@ -237,13 +237,14 @@ describe("Turkish output support", () => {
 
   it("accepts Turkish suggestions using proper nouns with case suffixes", () => {
     // "Google'da" is Google + Turkish locative suffix — the base name is in
-    // the corpus, so this is rewording, not fabrication.
+    // the corpus, so this is rewording, not fabrication. The resume itself
+    // is Turkish here: rewrites must stay in the resume's own language.
     const ok = isSuggestionSupported(
       suggestion(
-        "Worked at Google on search infrastructure.",
+        "Google'da arama altyapısı üzerinde çalıştı.",
         "Arama altyapısını Google'da geliştirdi ve sistemleri iyileştirdi.",
       ),
-      "Worked at Google on search infrastructure since 2021.",
+      "Google'da arama altyapısı üzerinde çalıştı. 2021'den beri görevde.",
     );
     expect(ok).toBe(true);
   });
@@ -257,5 +258,44 @@ describe("Turkish output support", () => {
       "Worked at Google on search infrastructure since 2021.",
     );
     expect(ok).toBe(false);
+  });
+});
+
+describe("translated improved_text guard", () => {
+  // Regression: a production Turkish analysis translated an English
+  // resume passage into Turkish in improved_text. Applying it would have
+  // injected Turkish prose into an English resume.
+  it("drops a Turkish rewrite of an English resume passage", () => {
+    const ok = isSuggestionSupported(
+      suggestion(
+        "Developed dynamic and responsive user interfaces using Next.js, TypeScript, and Tailwind CSS.",
+        "Next.js, TypeScript ve Tailwind CSS kullanarak dinamik ve duyarlı kullanıcı arayüzleri geliştirdim.",
+      ),
+      "Developed dynamic and responsive user interfaces using Next.js, TypeScript, and Tailwind CSS to improve user experience.",
+    );
+    expect(ok).toBe(false);
+  });
+
+  it("keeps Turkish rewrites when the resume itself is Turkish", () => {
+    const ok = isSuggestionSupported(
+      suggestion(
+        "Veri işleme sistemleri geliştirdim.",
+        "Ölçeklenebilir veri işleme sistemleri tasarlayıp geliştirdim.",
+      ),
+      "Veri işleme sistemleri geliştirdim. Python ve SQL kullandım.",
+    );
+    expect(ok).toBe(true);
+  });
+
+  it("tolerates a single Turkish proper noun in an English rewrite", () => {
+    // One İ/ş/ğ/ı-bearing token is not evidence of translation.
+    const ok = isSuggestionSupported(
+      suggestion(
+        "Worked in Istanbul on backend systems.",
+        "Worked in İstanbul on backend systems, improving reliability.",
+      ),
+      "Worked in Istanbul on backend systems.",
+    );
+    expect(ok).toBe(true);
   });
 });

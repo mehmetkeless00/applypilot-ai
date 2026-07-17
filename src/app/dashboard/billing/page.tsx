@@ -9,9 +9,9 @@ import { billingAvailable } from "@/lib/billing/stripe";
 import { subscriptionSummary } from "@/lib/billing/status";
 import { countUsageSince, monthStartUtc } from "@/lib/billing/usage";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 
-export const metadata = { title: "Billing" };
+export const generateMetadata = () => pageTitle("billing");
 
 export default async function BillingPage({
   searchParams,

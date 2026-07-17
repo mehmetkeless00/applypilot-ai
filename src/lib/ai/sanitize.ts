@@ -99,6 +99,28 @@ function unsupportedProperNouns(text: string, corpusWords: Set<string>): string[
   return [...new Set(found)];
 }
 
+// Letters that exist in Turkish but not in English text: dotless ı,
+// capital İ, ş and ğ. (ç/ö/ü are shared with too many languages to be a
+// reliable signal.)
+const TURKISH_LETTER_RE = /[ğĞıİşŞ]/g;
+
+function turkishLetterCount(text: string): number {
+  return (text.match(TURKISH_LETTER_RE) ?? []).length;
+}
+
+/**
+ * True when improved_text was translated into Turkish even though the
+ * passage it replaces (and the whole resume) contains no Turkish-specific
+ * letters. Applying such a suggestion would inject Turkish prose into an
+ * English resume. The ≥3 threshold tolerates a stray proper noun.
+ */
+export function isTranslatedIntoTurkish(
+  improved: string,
+  corpus: string,
+): boolean {
+  return turkishLetterCount(corpus) === 0 && turkishLetterCount(improved) >= 3;
+}
+
 export interface SuggestionLike {
   section: string;
   original_text: string;
@@ -120,6 +142,7 @@ export function isSuggestionSupported(
   if (containsForbiddenPhrase(improved)) return false;
 
   const corpus = `${original}\n${resumeText}`;
+  if (isTranslatedIntoTurkish(improved, corpus)) return false;
   if (unsupportedYears(improved, corpus).length > 0) return false;
   if (unsupportedMetrics(improved, corpus).length > 0) return false;
   if (unsupportedProperNouns(improved, wordSet(corpus)).length > 0) return false;

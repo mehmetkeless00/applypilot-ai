@@ -22,7 +22,8 @@ For resume_suggestions: rewrite the 3-8 resume passages where better wording wou
 
 Factual integrity (non-negotiable, applies to resume_suggestions, tailored_summary, cover_letter, fit_summary, and missing_skills suggestions alike):
 - Copy every fact from the resume verbatim: dates, years, durations, company names, job titles, locations, degrees, certifications, technologies, and metrics. Never alter, "correct", update, normalize, or re-estimate any of them.
-- The resume's dates are authoritative exactly as written, even if they look unusual, inconsistent, or in the future to you. You do not know today's date. Never reason about the current date and never change a date because of it. "July 2025" must remain "July 2025", character for character.
+- The resume's dates are authoritative exactly as written, even if they look unusual or inconsistent to you. "July 2025" must remain "July 2025", character for character.
+- Today's date is provided in the user message as <current_date>. Judge recency only against that date, never against your own assumption of what year it is. A date is only "future" or "ongoing" if it is later than <current_date>. Never alter, doubt, or "correct" a resume date because of the current date; if a date genuinely lies after <current_date>, keep it unchanged and note the concern only in that suggestion's reason field.
 - Never write "assumed", "corrected", "estimated", "inferred", "presumed", or any similar qualifier about a fact. If something looks inconsistent, keep the original text unchanged and mention the concern only in that suggestion's reason field.
 - In resume_suggestions, improved_text may change wording, structure, clarity, grammar, and ATS phrasing only. Every fact in improved_text must already appear in original_text or elsewhere in the resume. Copy dates and numbers character for character; never introduce a company, title, location, technology, metric, or date that the resume does not contain.
 
@@ -38,7 +39,7 @@ const TURKISH_DIRECTIVE = `
 Output language: Turkish.
 - Write fit_summary, strengths, missing_skills (skill names may stay in their industry-standard form), every suggestion field, resume_suggestions' section and reason, tailored_summary, and cover_letter in natural, professional Turkish — idiomatic product Turkish, not literal translation.
 - Never translate proper nouns or factual content: company names, product and technology names, certifications, degrees, job titles that are proper names, dates, and metrics stay exactly as written in the resume and job description.
-- resume_suggestions.original_text must remain the candidate's exact resume text, completely untranslated. improved_text must stay in the same language as original_text (it replaces text inside the resume), while reason is written in Turkish.
+- resume_suggestions.original_text must remain the candidate's exact resume text, completely untranslated. improved_text must stay in the same language as original_text (it replaces text inside the resume), while reason is written in Turkish. This is a hard rule: if original_text is English, improved_text must also be English — a Turkish rewrite of an English resume passage corrupts the resume when applied. Never translate improved_text into Turkish.
 - All factual-integrity rules above apply unchanged: copy every fact verbatim, never "correct" dates, never invent experience.`;
 
 export function systemPromptFor(language: AnalysisLanguage): string {
@@ -60,6 +61,9 @@ export function buildUserParts(input: PromptInput): Part[] {
   const parts: Part[] = [];
 
   const header = [
+    // Grounds recency judgments: without this the model falls back to its
+    // training-time year and can call past experience "future".
+    `<current_date>${new Date().toISOString().slice(0, 10)}</current_date>`,
     `<job_title>${input.jobTitle}</job_title>`,
     input.company ? `<company>${input.company}</company>` : null,
     `<job_description>\n${input.jobDescription}\n</job_description>`,

@@ -8,10 +8,10 @@ import {
 import { formatDate, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 import type { Analysis } from "@/lib/types";
 
-export const metadata = { title: "My analyses" };
+export const generateMetadata = () => pageTitle("myAnalyses");
 
 const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
 

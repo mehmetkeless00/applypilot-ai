@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SYSTEM_PROMPT, systemPromptFor } from "./prompt";
+import { buildUserParts, SYSTEM_PROMPT, systemPromptFor } from "./prompt";
 
 describe("systemPromptFor", () => {
   it("returns the base prompt unchanged for English", () => {
@@ -25,5 +25,27 @@ describe("systemPromptFor", () => {
     expect(prompt).toContain(
       "improved_text must stay in the same language as original_text",
     );
+    // Regression: production translated English improved_text into Turkish.
+    expect(prompt).toContain("Never translate improved_text into Turkish");
+  });
+});
+
+describe("date grounding", () => {
+  // Regression: without today's date the model fell back to its training
+  // year and described July 2025 experience as "future dates" in mid-2026.
+  it("supplies today's date to the model", () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const parts = buildUserParts({
+      jobTitle: "Engineer",
+      jobDescription: "Build things.",
+      resumeText: "Resume body",
+    });
+    const header = parts[0].text ?? "";
+    expect(header).toContain(`<current_date>${today}</current_date>`);
+  });
+
+  it("instructs the model to judge recency only against the provided date", () => {
+    expect(SYSTEM_PROMPT).toContain("Judge recency only against that date");
+    expect(SYSTEM_PROMPT).toContain('"July 2025" must remain "July 2025"');
   });
 });

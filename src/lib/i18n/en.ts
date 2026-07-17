@@ -15,6 +15,23 @@ export const en = {
     errorBody: "An unexpected error occurred while loading this page.",
     tryAgain: "Try again",
   },
+  meta: {
+    defaultTitle: "ApplyPilot AI — Tailor every job application with AI",
+    description:
+      "Paste a job description and your resume. Get an AI fit score, skills-gap analysis, a tailored professional summary, and a ready-to-send cover letter.",
+    myAnalyses: "My analyses",
+    newAnalysis: "New analysis",
+    analysis: "Analysis",
+    resumes: "My resumes",
+    resume: "Resume",
+    billing: "Billing",
+    signIn: "Sign in",
+    signUp: "Sign up",
+    forgotPassword: "Reset your password",
+    resetPassword: "Choose a new password",
+    privacy: "Privacy Policy",
+    terms: "Terms of Service",
+  },
   nav: {
     myAnalyses: "My analyses",
     newAnalysis: "New analysis",

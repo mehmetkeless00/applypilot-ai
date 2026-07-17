@@ -16,6 +16,23 @@ export const tr: Messages = {
     errorBody: "Bu sayfa yüklenirken beklenmedik bir hata oluştu.",
     tryAgain: "Tekrar dene",
   },
+  meta: {
+    defaultTitle: "ApplyPilot AI — Her başvuruyu yapay zekâ ile kişiselleştirin",
+    description:
+      "İlan metnini ve CV'nizi yapıştırın. Yapay zekâ destekli uyum puanı, yetkinlik açığı analizi, kişiselleştirilmiş profesyonel özet ve gönderime hazır ön yazı alın.",
+    myAnalyses: "Analizlerim",
+    newAnalysis: "Yeni analiz",
+    analysis: "Analiz",
+    resumes: "CV'lerim",
+    resume: "CV",
+    billing: "Abonelik",
+    signIn: "Giriş yap",
+    signUp: "Kayıt ol",
+    forgotPassword: "Şifrenizi sıfırlayın",
+    resetPassword: "Yeni bir şifre belirleyin",
+    privacy: "Gizlilik Politikası",
+    terms: "Kullanım Koşulları",
+  },
   nav: {
     myAnalyses: "Analizlerim",
     newAnalysis: "Yeni analiz",

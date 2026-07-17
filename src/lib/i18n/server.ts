@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getMessages, type Messages } from "./index";
 import { DEFAULT_LOCALE, LOCALE_COOKIE, normalizeLocale, type Locale } from "./locales";
 
 /**
@@ -14,4 +15,15 @@ export async function getLocale(): Promise<Locale> {
   } catch {
     return DEFAULT_LOCALE;
   }
+}
+
+/**
+ * Localized document title for a page's generateMetadata. The root layout's
+ * `%s — ApplyPilot AI` template appends the brand, so titles here must not
+ * repeat it (doing so doubled the brand in the tab title).
+ */
+export async function pageTitle(
+  key: keyof Messages["meta"],
+): Promise<{ title: string }> {
+  return { title: getMessages(await getLocale()).meta[key] };
 }

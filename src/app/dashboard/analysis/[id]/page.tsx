@@ -19,10 +19,10 @@ import { Badge } from "@/components/ui/Badge";
 import { formatDate, scoreTone } from "@/lib/utils";
 import { decodeAnalysisMetadata } from "@/lib/text";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 import type { Analysis, AtsKeyword } from "@/lib/types";
 
-export const metadata = { title: "Analysis" };
+export const generateMetadata = () => pageTitle("analysis");
 
 export default async function AnalysisPage({
   params,

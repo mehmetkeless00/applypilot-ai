@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
+import { getMessages } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
@@ -16,20 +17,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin", "latin-ext"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "ApplyPilot AI — Tailor every job application with AI",
-    template: "%s — ApplyPilot AI",
-  },
-  description:
-    "Paste a job description and your resume. Get an AI fit score, skills-gap analysis, a tailored professional summary, and a ready-to-send cover letter.",
-  openGraph: {
-    title: "ApplyPilot AI",
-    description:
-      "AI-powered fit scores, skills-gap analysis, and cover letters for job seekers.",
-    type: "website",
-  },
-};
+// Localized per request from the lang cookie, like the page content.
+export async function generateMetadata(): Promise<Metadata> {
+  const t = getMessages(await getLocale()).meta;
+  return {
+    title: {
+      default: t.defaultTitle,
+      template: "%s — ApplyPilot AI",
+    },
+    description: t.description,
+    openGraph: {
+      title: "ApplyPilot AI",
+      description: t.description,
+      type: "website",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

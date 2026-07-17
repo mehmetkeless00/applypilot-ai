@@ -1,8 +1,8 @@
 import { signIn } from "../actions";
 import { AuthForm } from "@/components/auth/AuthForm";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 
-export const metadata = { title: "Sign in — ApplyPilot AI" };
+export const generateMetadata = () => pageTitle("signIn");
 
 export default async function LoginPage({
   searchParams,

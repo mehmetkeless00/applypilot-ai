@@ -4,10 +4,10 @@ import { NewResumeForm } from "@/components/resumes/NewResumeForm";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDate } from "@/lib/utils";
 import { getMessages } from "@/lib/i18n";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 import type { Resume } from "@/lib/types";
 
-export const metadata = { title: "My resumes" };
+export const generateMetadata = () => pageTitle("resumes");
 
 interface ResumeListRow extends Resume {
   resume_versions: { count: number }[];

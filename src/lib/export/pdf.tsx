@@ -1,5 +1,6 @@
 import {
   Document,
+  Font,
   Page,
   StyleSheet,
   Text,
@@ -15,29 +16,43 @@ import {
   type ExportDoc,
   type ExportStrings,
 } from "./content";
+import { ROBOTO_BOLD, ROBOTO_REGULAR } from "./fonts";
+
+// The built-in Helvetica fonts only cover WinAnsi and silently corrupt
+// Turkish characters (ş → _, ı → 1, İ → 0); Roboto covers Latin-Extended.
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: ROBOTO_REGULAR },
+    { src: ROBOTO_BOLD, fontWeight: 700 },
+  ],
+});
+// Turkish words were being broken at arbitrary points by the default
+// English hyphenation; disable soft hyphenation entirely.
+Font.registerHyphenationCallback((word) => [word]);
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "Roboto",
     fontSize: 10.5,
     lineHeight: 1.5,
     color: "#1e293b",
     paddingVertical: 48,
     paddingHorizontal: 56,
   },
-  title: { fontSize: 18, fontFamily: "Helvetica-Bold", marginBottom: 2 },
+  title: { fontSize: 18, fontWeight: 700, marginBottom: 2 },
   subtitle: { fontSize: 10, color: "#64748b", marginBottom: 18 },
   heading: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: 700,
     marginTop: 16,
     marginBottom: 6,
   },
   paragraph: { marginBottom: 8 },
   item: { marginBottom: 6 },
-  itemTitle: { fontFamily: "Helvetica-Bold" },
+  itemTitle: { fontWeight: 700 },
   meta: { color: "#64748b" },
-  score: { fontSize: 26, fontFamily: "Helvetica-Bold", color: "#4f46e5" },
+  score: { fontSize: 26, fontWeight: 700, color: "#4f46e5" },
 });
 
 function Header({ analysis, title }: { analysis: Analysis; title: string }) {

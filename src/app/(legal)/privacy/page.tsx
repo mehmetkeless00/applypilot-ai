@@ -1,7 +1,7 @@
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n";
 
-export const metadata = { title: "Privacy Policy" };
+export const generateMetadata = () => pageTitle("privacy");
 
 // NOTE: template language — have counsel review before relying on it.
 // The Turkish text is a product translation of the same template and

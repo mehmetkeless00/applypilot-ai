@@ -16,7 +16,7 @@ vi.mock("next/headers", () => ({
   },
 }));
 
-import { getLocale } from "./server";
+import { getLocale, pageTitle } from "./server";
 
 beforeEach(() => {
   cookieStore.value = undefined;
@@ -41,5 +41,23 @@ describe("getLocale (lang cookie)", () => {
   it("falls back to English outside a request scope", async () => {
     cookieStore.throws = true;
     expect(await getLocale()).toBe("en");
+  });
+});
+
+describe("pageTitle", () => {
+  it("localizes document titles from the lang cookie", async () => {
+    expect(await pageTitle("signIn")).toEqual({ title: "Sign in" });
+    cookieStore.value = "tr";
+    expect(await pageTitle("signIn")).toEqual({ title: "Giriş yap" });
+    expect(await pageTitle("myAnalyses")).toEqual({ title: "Analizlerim" });
+  });
+
+  it("never repeats the brand — the layout template appends it", async () => {
+    // Regression: static titles like "Sign in — ApplyPilot AI" rendered as
+    // "Sign in — ApplyPilot AI — ApplyPilot AI" through the %s template.
+    for (const key of ["signIn", "signUp", "billing", "resumes"] as const) {
+      const { title } = await pageTitle(key);
+      expect(title).not.toContain("ApplyPilot");
+    }
   });
 });

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, pageTitle } from "@/lib/i18n/server";
 
-export const metadata = { title: "Choose a new password" };
+export const generateMetadata = () => pageTitle("resetPassword");
 
 // Reached from the recovery-link callback, which establishes a session.
 export default async function ResetPasswordPage() {
