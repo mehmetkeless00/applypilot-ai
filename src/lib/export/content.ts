@@ -23,6 +23,9 @@ export function exportLanguage(analysis: Analysis): ExportLanguage {
 
 export interface ExportStrings {
   docTitles: Record<ExportDoc, string>;
+  /** The report language's own name, shown in the document header. */
+  languageName: string;
+  fitAssessment: string;
   strengths: string;
   missingSkills: string;
   atsCoverage: string;
@@ -31,6 +34,7 @@ export interface ExportStrings {
   coverLetter: string;
   current: string;
   improved: string;
+  reason: string;
   impact: (impact: string) => string;
   importance: Record<string, string>;
   status: Record<string, string>;
@@ -45,6 +49,8 @@ const EXPORT_STRINGS: Record<ExportLanguage, ExportStrings> = {
       cover_letter: "Cover Letter",
       full: "Application Fit Report",
     },
+    languageName: "English",
+    fitAssessment: "Fit assessment",
     strengths: "Strengths",
     missingSkills: "Missing skills",
     atsCoverage: "ATS keyword coverage",
@@ -53,6 +59,7 @@ const EXPORT_STRINGS: Record<ExportLanguage, ExportStrings> = {
     coverLetter: "Cover letter",
     current: "Current",
     improved: "Improved",
+    reason: "Why",
     impact: (impact) => `${impact} impact`,
     importance: {
       critical: "critical",
@@ -69,6 +76,8 @@ const EXPORT_STRINGS: Record<ExportLanguage, ExportStrings> = {
       cover_letter: "Ön Yazı",
       full: "Başvuru Uyum Raporu",
     },
+    languageName: "Türkçe",
+    fitAssessment: "Uyum değerlendirmesi",
     strengths: "Güçlü yönler",
     missingSkills: "Eksik yetkinlikler",
     atsCoverage: "ATS anahtar kelime kapsamı",
@@ -77,6 +86,7 @@ const EXPORT_STRINGS: Record<ExportLanguage, ExportStrings> = {
     coverLetter: "Ön yazı",
     current: "Mevcut",
     improved: "İyileştirilmiş",
+    reason: "Gerekçe",
     impact: (impact) =>
       `${{ high: "yüksek", medium: "orta", low: "düşük" }[impact] ?? impact} etki`,
     importance: {

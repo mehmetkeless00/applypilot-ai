@@ -10,6 +10,7 @@ import { Strengths } from "@/components/analysis/Strengths";
 import { CopyableText } from "@/components/analysis/CopyableText";
 import { DeleteAnalysisButton } from "@/components/analysis/DeleteAnalysisButton";
 import { ExportButtons } from "@/components/analysis/ExportButtons";
+import { RegenerateLanguageNotice } from "@/components/analysis/RegenerateLanguageNotice";
 import { RescoreButton } from "@/components/analysis/RescoreButton";
 import {
   ScoreComparison,
@@ -90,6 +91,10 @@ export default async function AnalysisPage({
 
   const tone = scoreTone(analysis.fit_score);
   const toneToBadge = { poor: "red", fair: "amber", strong: "green" } as const;
+  // Exports always follow the analysis's own language (legacy rows → en);
+  // the badge makes that explicit, and a mismatch with the UI language
+  // offers a full regeneration instead of silently translating.
+  const reportLanguage = analysis.output_language === "tr" ? "tr" : "en";
 
   return (
     <div className="animate-rise space-y-6">
@@ -109,9 +114,9 @@ export default async function AnalysisPage({
               {analysis.company || t.dashboard.companyUnknown} ·{" "}
               {formatDate(analysis.created_at, locale)}
             </span>
-            {analysis.output_language && analysis.output_language !== locale && (
-              <Badge tone="slate">{analysis.output_language.toUpperCase()}</Badge>
-            )}
+            <Badge tone={reportLanguage === locale ? "slate" : "indigo"}>
+              {t.analysis.reportBadge(reportLanguage)}
+            </Badge>
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -129,6 +134,14 @@ export default async function AnalysisPage({
           <DeleteAnalysisButton id={analysis.id} locale={locale} />
         </div>
       </div>
+
+      {reportLanguage !== locale && (
+        <RegenerateLanguageNotice
+          analysisId={analysis.id}
+          targetLanguage={locale}
+          locale={locale}
+        />
+      )}
 
       <Card className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
         <div className="flex shrink-0 flex-col items-center gap-2">

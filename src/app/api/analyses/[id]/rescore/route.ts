@@ -13,9 +13,13 @@ export const maxDuration = 300;
  * resume, the resume's *latest* version is used — that's the point of the
  * loop: edit your resume, re-score, see the delta. Legacy analyses without
  * a saved resume are re-run against their stored resume text/PDF.
+ *
+ * An optional JSON body `{ outputLanguage: "en" | "tr" }` regenerates the
+ * report in the other language through the same full pipeline (same quota,
+ * same safeguards); without it the original's language is kept.
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const supabase = await createClient();
@@ -42,6 +46,13 @@ export async function POST(
   // persisted with clean values.
   const original = decodeAnalysisMetadata(data as Analysis);
 
+  // Old clients send no body at all — that must keep working unchanged.
+  const body = await request.json().catch(() => null);
+  const requestedLanguage =
+    body?.outputLanguage === "en" || body?.outputLanguage === "tr"
+      ? (body.outputLanguage as "en" | "tr")
+      : undefined;
+
   const hasSavedResume = Boolean(original.resume_id);
   if (!hasSavedResume && !original.resume_text && !original.resume_file_path) {
     return NextResponse.json(
@@ -62,9 +73,11 @@ export async function POST(
           ? undefined
           : (original.resume_file_path ?? undefined),
       rescoredFrom: original.id,
-      // Re-scores keep the original's output language; analyses created
-      // before the language column existed safely default to English.
-      outputLanguage: original.output_language === "tr" ? "tr" : "en",
+      // Re-scores keep the original's output language unless the caller
+      // explicitly regenerates in the other one; analyses created before
+      // the language column existed safely default to English.
+      outputLanguage:
+        requestedLanguage ?? (original.output_language === "tr" ? "tr" : "en"),
       locale,
     });
     return NextResponse.json({ id: newId });

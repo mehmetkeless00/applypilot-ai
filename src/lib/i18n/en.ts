@@ -234,6 +234,17 @@ export const en = {
     rescoreUsesSame: "Re-runs with the same resume.",
     rescoreFailed: "Re-score failed. Try again.",
     upgrade: "Upgrade",
+    // The report language names itself, so the badge reads the same in
+    // both UI languages.
+    reportBadge: (lang: "en" | "tr") =>
+      lang === "tr" ? "Türkçe rapor" : "English report",
+    languageMismatch:
+      "This analysis was generated in Turkish. Re-run it with English output to create an English report.",
+    regenerate: "Regenerate in English",
+    regenerateConfirmTitle: "Regenerate in English?",
+    regenerateConfirmBody:
+      "This runs a fresh analysis of the same job and resume with English output. It uses one analysis from your monthly quota; the original analysis is kept.",
+    regenerating: "Regenerating…",
     deleteConfirm: "Delete this analysis? This cannot be undone.",
     exportPdf: "Export PDF",
     exportDocx: "Export DOCX",
@@ -317,6 +328,7 @@ export const en = {
     jobDescription: "Job description",
     tabPasteJob: "Paste job description",
     tabImport: "Import from URL",
+    importFallbackHint: "If import fails, you can paste the job description manually.",
     importUrlLabel: "Job posting URL",
     importHint:
       "Works best with Greenhouse, Lever, Ashby, and Workable; many other job pages import too, but not all. For LinkedIn, copy the posting text and use the Paste tab.",

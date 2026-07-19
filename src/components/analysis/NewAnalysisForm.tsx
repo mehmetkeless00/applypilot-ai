@@ -97,7 +97,9 @@ export function NewAnalysisForm({
   // it per analysis.
   const [outputLanguage, setOutputLanguage] = useState<Locale>(locale);
 
-  const [jobMode, setJobMode] = useState<JobMode>("paste");
+  // URL import is the default path; pasting stays one tab away as the
+  // fallback (and imports switch back to it so the text can be reviewed).
+  const [jobMode, setJobMode] = useState<JobMode>("import");
   const [jobTitle, setJobTitle] = useState("");
   const [company, setCompany] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -263,7 +265,7 @@ export function NewAnalysisForm({
             {t.jobDescription}
           </span>
           <ModeTabs
-            modes={["paste", "import"] as const}
+            modes={["import", "paste"] as const}
             labels={{ paste: t.tabPasteJob, import: t.tabImport }}
             active={jobMode}
             onChange={setJobMode}
@@ -280,9 +282,13 @@ export function NewAnalysisForm({
               value={importUrl}
               onChange={(e) => setImportUrl(e.target.value)}
               disabled={importing}
+              autoFocus
             />
             <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
               {t.importHint}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {t.importFallbackHint}
             </p>
             {importError && (
               <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">

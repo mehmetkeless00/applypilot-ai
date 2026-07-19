@@ -113,9 +113,15 @@ const baseAnalysis = {
 
 const ctx = { params: Promise.resolve({ id: "analysis-1" }) };
 
-function makeRequest() {
+function makeRequest(body?: unknown) {
   return new Request("http://localhost/api/analyses/analysis-1/rescore", {
     method: "POST",
+    ...(body !== undefined
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      : {}),
   });
 }
 
@@ -260,6 +266,44 @@ describe("POST /api/analyses/[id]/rescore", () => {
     expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("en");
     const insert = insertPayloads.find((p) => "fit_score" in p);
     expect(insert?.output_language).toBe("en");
+  });
+
+  it("regenerates in the requested language, preserving the original analysis", async () => {
+    analysisChain.row = { ...baseAnalysis, output_language: "en" };
+    const res = await POST(makeRequest({ outputLanguage: "tr" }), ctx);
+    expect(res.status).toBe(200);
+    expect((await res.json()).id).toBe("analysis-2");
+    // Full pipeline in the new language, lineage kept, quota exactly once.
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("tr");
+    const insert = insertPayloads.find((p) => "fit_score" in p);
+    expect(insert?.output_language).toBe("tr");
+    expect(insert?.rescored_from).toBe("analysis-1");
+    expect(usageInserts).toEqual([{ user_id: "user-123", kind: "analysis" }]);
+    // Nothing updates or deletes the original row (insert-only writes).
+    expect(insertPayloads.filter((p) => "fit_score" in p)).toHaveLength(1);
+  });
+
+  it("regenerates a Turkish analysis in English on request", async () => {
+    analysisChain.row = { ...baseAnalysis, output_language: "tr" };
+    const res = await POST(makeRequest({ outputLanguage: "en" }), ctx);
+    expect(res.status).toBe(200);
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("en");
+  });
+
+  it("ignores junk outputLanguage values and keeps the original language", async () => {
+    analysisChain.row = { ...baseAnalysis, output_language: "tr" };
+    const res = await POST(makeRequest({ outputLanguage: "de" }), ctx);
+    expect(res.status).toBe(200);
+    expect(analyzeMock.mock.calls[0][0].outputLanguage).toBe("tr");
+  });
+
+  it("handles quota-full regeneration without side effects", async () => {
+    usageState.count = 50;
+    const res = await POST(makeRequest({ outputLanguage: "tr" }), ctx);
+    expect(res.status).toBe(402);
+    expect(insertPayloads).toHaveLength(0);
+    expect(usageInserts).toHaveLength(0);
+    expect(analyzeMock).not.toHaveBeenCalled();
   });
 
   it("re-persists decoded metadata when re-scoring a legacy analysis", async () => {

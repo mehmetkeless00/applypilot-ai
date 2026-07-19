@@ -237,6 +237,14 @@ export const tr: Messages = {
     rescoreUsesSame: "Aynı CV ile yeniden çalıştırılır.",
     rescoreFailed: "Yeniden puanlama başarısız. Tekrar deneyin.",
     upgrade: "Yükselt",
+    reportBadge: (lang) => (lang === "tr" ? "Türkçe rapor" : "English report"),
+    languageMismatch:
+      "Bu analiz İngilizce oluşturuldu. Türkçe bir rapor için analizi Türkçe çıktı diliyle yeniden oluşturun.",
+    regenerate: "Türkçe yeniden oluştur",
+    regenerateConfirmTitle: "Türkçe yeniden oluşturulsun mu?",
+    regenerateConfirmBody:
+      "Aynı ilan ve CV ile Türkçe çıktı dilinde yeni bir analiz çalıştırır. Aylık kotanızdan bir analiz kullanır; mevcut analiz korunur.",
+    regenerating: "Yeniden oluşturuluyor…",
     deleteConfirm: "Bu analiz silinsin mi? Bu işlem geri alınamaz.",
     exportPdf: "PDF indir",
     exportDocx: "DOCX indir",
@@ -318,6 +326,8 @@ export const tr: Messages = {
     jobDescription: "İlan metni",
     tabPasteJob: "İlan metnini yapıştır",
     tabImport: "URL'den içe aktar",
+    importFallbackHint:
+      "İçe aktarma başarısız olursa ilan metnini manuel olarak yapıştırabilirsiniz.",
     importUrlLabel: "İlan bağlantısı",
     importHint:
       "Greenhouse, Lever, Ashby ve Workable ile en iyi sonucu verir; başka birçok ilan sayfası da çalışır ama hepsi değil. LinkedIn için ilan metnini kopyalayıp Yapıştır sekmesini kullanın.",
