@@ -39,6 +39,7 @@ export function DashboardNav({
 
   const links = [
     { href: "/dashboard", label: t.myAnalyses },
+    { href: "/dashboard/jobs", label: t.findJobs },
     { href: "/dashboard/resumes", label: t.resumes },
     { href: "/dashboard/billing", label: t.billing },
   ];

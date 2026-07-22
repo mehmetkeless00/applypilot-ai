@@ -64,6 +64,25 @@ export async function fetchLatestVersion(
   return (data as ResumeVersion | null) ?? null;
 }
 
+/**
+ * Fetches one specific version of a resume. The resume_id equality check
+ * (on top of RLS ownership) rejects version ids that belong to a
+ * different resume.
+ */
+export async function fetchVersion(
+  supabase: SupabaseClient,
+  resumeId: string,
+  versionId: string,
+): Promise<ResumeVersion | null> {
+  const { data } = await supabase
+    .from("resume_versions")
+    .select("*")
+    .eq("id", versionId)
+    .eq("resume_id", resumeId)
+    .maybeSingle();
+  return (data as ResumeVersion | null) ?? null;
+}
+
 export async function createResumeWithVersion(
   supabase: SupabaseClient,
   userId: string,

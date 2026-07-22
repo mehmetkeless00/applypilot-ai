@@ -10,7 +10,11 @@ import {
   monthStartUtc,
   recordUsage,
 } from "@/lib/billing/usage";
-import { createResumeWithVersion, fetchLatestVersion } from "@/lib/resumes/resumes";
+import {
+  createResumeWithVersion,
+  fetchLatestVersion,
+  fetchVersion,
+} from "@/lib/resumes/resumes";
 import { extractPdfText } from "@/lib/resumes/extract";
 import { DEFAULT_LOCALE, getMessages, type Locale } from "@/lib/i18n";
 
@@ -37,6 +41,8 @@ export interface ExecuteAnalysisInput {
   resumeText?: string;
   resumeFilePath?: string;
   resumeId?: string;
+  /** Pin a specific saved version instead of the resume's latest. */
+  resumeVersionId?: string;
   saveResumeTitle?: string;
   rescoredFrom?: string;
   /** Language of the AI-generated output (stored on the analysis). */
@@ -85,7 +91,9 @@ export async function executeAnalysis(
   let resumeVersionId: string | null = null;
 
   if (input.resumeId) {
-    const version = await fetchLatestVersion(supabase, input.resumeId);
+    const version = input.resumeVersionId
+      ? await fetchVersion(supabase, input.resumeId, input.resumeVersionId)
+      : await fetchLatestVersion(supabase, input.resumeId);
     if (!version) {
       throw new AnalysisRequestError(t.errors.savedResumeNotFound, 404);
     }

@@ -30,6 +30,7 @@ Fill in:
 | `STRIPE_WEBHOOK_SECRET` | Server-only. Signing secret for a webhook endpoint pointed at `/api/stripe/webhook` (locally: `stripe listen --forward-to localhost:3000/api/stripe/webhook`). |
 | `STRIPE_PRO_PRICE_ID` | Price ID of a recurring "Pro" subscription product you create in Stripe. |
 | `NEXT_PUBLIC_APP_URL` | Base URL used in Stripe redirect links, e.g. `http://localhost:3000`. |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Server-only, optional. Free credentials from [developer.adzuna.com](https://developer.adzuna.com) power the **Find jobs** search. Without them, on-site search is unavailable and remote search uses Remotive only (which needs no key — don't add one). |
 
 ### 3. Run
 
@@ -58,6 +59,10 @@ The Turkish privacy/terms pages are product translations of the same template te
 ## Resume library
 
 Resumes live in **My resumes** (`/dashboard/resumes`) and are versioned: every edit creates an immutable new version, and each analysis records exactly which resume version it scored (`analyses.resume_id` / `resume_version_id`). The new-analysis form defaults to your saved resume; pasted or uploaded resumes can be saved to the library in the same step. Deleting a resume keeps past analyses intact (links null out). Migration: `0005_resumes.sql`.
+
+## Job discovery (Find jobs)
+
+**Find jobs** (`/dashboard/jobs`) searches real listings from **Adzuna** (19 countries, needs the free `ADZUNA_APP_ID`/`ADZUNA_APP_KEY`) and **Remotive** (remote jobs, keyless) against a selected saved CV version. Search terms are suggested only from text literally present in the CV and are fully editable; provider requests carry those keywords, never CV content, and all credentials stay server-side (`src/lib/jobs/`). Each result shows a deterministic **Estimated match** (title/skill/seniority/location/employment heuristics with a visible explanation — no AI call, no quota use, and no promise of eligibility). "Analyze this job" asks for confirmation, then feeds the listing through the normal analysis pipeline — one analysis from the monthly quota, pinned to the selected CV version, with the provider and original listing URL preserved in the stored job description. Duplicate listings across providers are merged; provider failures degrade to partial results with a notice.
 
 **PDF text extraction** — uploaded PDF resumes have their text extracted server-side (`unpdf`, a serverless-friendly pdf.js wrapper) and stored on the version alongside the original PDF path, so the resume editor prefills and edits create new text versions. Analyses prefer the parsed/edited text and fall back to the original PDF only when no text exists (e.g. scanned PDFs). Legacy PDF versions without stored text get on-demand extraction on the resume page, with a clear manual-paste fallback if the PDF has no extractable text.
 

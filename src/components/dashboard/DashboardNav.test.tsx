@@ -28,11 +28,13 @@ describe("DashboardNav", () => {
     navState.pathname = "/dashboard/resumes";
     const html = renderToStaticMarkup(<DashboardNav locale="en" />);
     expect(html).toContain('href="/dashboard"');
+    expect(html).toContain('href="/dashboard/jobs"');
     expect(html).toContain('href="/dashboard/resumes"');
     expect(html).toContain('href="/dashboard/billing"');
     expect(html).toContain('href="/dashboard/new"');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("My analyses");
+    expect(html).toContain("Find jobs");
     expect(html).toContain("New analysis");
   });
 
@@ -50,6 +52,7 @@ describe("DashboardNav", () => {
     navState.pathname = "/dashboard";
     const html = renderToStaticMarkup(<DashboardNav locale="tr" />);
     expect(html).toContain("Analizlerim");
+    expect(html).toContain("İş bul");
     expect(html).toContain("CV&#x27;ler");
     expect(html).toContain("Abonelik");
     expect(html).toContain("Yeni analiz");
