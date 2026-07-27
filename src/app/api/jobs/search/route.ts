@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getMessages } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { fetchVersion } from "@/lib/resumes/resumes";
-import { ADZUNA_COUNTRIES } from "@/lib/jobs/adzuna";
+import { SUPPORTED_COUNTRIES } from "@/lib/jobs/countries";
 import { scoreListing } from "@/lib/jobs/match";
 import { checkSearchRateLimit } from "@/lib/jobs/ratelimit";
 import { searchJobs } from "@/lib/jobs/search";
@@ -21,7 +21,7 @@ const searchSchema = z.object({
   resumeId: z.uuid(),
   resumeVersionId: z.uuid(),
   query: z.string().trim().min(2).max(120),
-  country: z.enum(ADZUNA_COUNTRIES),
+  country: z.enum(SUPPORTED_COUNTRIES),
   workMode: z.enum(["remote", "onsite"]),
   city: z.string().trim().max(80).optional(),
   experienceLevel: z.enum(["any", "internship", "entry", "junior", "mid", "senior"]),

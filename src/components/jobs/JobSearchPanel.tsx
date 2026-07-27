@@ -66,7 +66,10 @@ export function JobSearchPanel({
   // phase === "loaded"
   if (!results) return null;
 
-  const providerStates: ProviderStatus[] = [results.providers.adzuna, results.providers.remotive];
+  const providerStates: ProviderStatus[] = [
+    results.providers.adzuna,
+    results.providers.remotive,
+  ];
   const activeStates = providerStates.filter((s) => s === "ok" || s === "failed");
   const noProviders = activeStates.length === 0;
   const allFailed = activeStates.length > 0 && activeStates.every((s) => s === "failed");

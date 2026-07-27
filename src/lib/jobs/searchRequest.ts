@@ -1,4 +1,4 @@
-import { ADZUNA_COUNTRIES, type AdzunaCountry } from "./adzuna";
+import { SUPPORTED_COUNTRIES, type SearchCountry } from "./countries";
 import type {
   EmploymentTypeFilter,
   ExperienceLevel,
@@ -14,7 +14,7 @@ export interface JobSearchRequestBody {
   resumeId: string;
   resumeVersionId: string;
   query: string;
-  country: AdzunaCountry;
+  country: SearchCountry;
   workMode: "remote" | "onsite";
   city?: string;
   experienceLevel: ExperienceLevel;
@@ -25,6 +25,20 @@ export interface JobSearchRequestBody {
 export type JobSearchClientResult =
   | { status: "ok"; data: JobSearchResponse }
   | { status: "error"; message: string };
+
+/**
+ * Turkey has no working on-site provider (see the routing comment in
+ * search.ts). Rather than let the user submit a search that's guaranteed
+ * to come back empty, the UI disables the submit control and explains why
+ * whenever this is true — a pure predicate so both the disabled state and
+ * the submit guard share one tested source of truth.
+ */
+export function isTurkeyOnsiteBlocked(
+  country: SearchCountry,
+  workMode: "remote" | "onsite",
+): boolean {
+  return country === "tr" && workMode === "onsite";
+}
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -111,7 +125,7 @@ export function recoverSearchParams(
   const maxDaysOldRaw = params.get("maxDaysOld");
 
   if (!resumeId || !resumeVersionId || !query || query.trim().length < 2) return null;
-  if (!country || !(ADZUNA_COUNTRIES as readonly string[]).includes(country)) return null;
+  if (!country || !(SUPPORTED_COUNTRIES as readonly string[]).includes(country)) return null;
   if (workMode !== "remote" && workMode !== "onsite") return null;
   if (!experienceLevel || !EXPERIENCE_LEVELS.includes(experienceLevel as ExperienceLevel)) {
     return null;
@@ -128,7 +142,7 @@ export function recoverSearchParams(
     resumeId,
     resumeVersionId,
     query,
-    country: country as AdzunaCountry,
+    country: country as SearchCountry,
     workMode,
     city: workMode === "onsite" && city ? city : undefined,
     experienceLevel: experienceLevel as ExperienceLevel,

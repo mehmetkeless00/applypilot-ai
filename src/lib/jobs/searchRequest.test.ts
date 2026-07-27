@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { recoverSearchParams, runJobSearch, type JobSearchRequestBody } from "./searchRequest";
+import {
+  isTurkeyOnsiteBlocked,
+  recoverSearchParams,
+  runJobSearch,
+  type JobSearchRequestBody,
+} from "./searchRequest";
 
 // Regression: the Find jobs page could silently stay on its initial state
 // when clicked — no loading, no results, no error. Root cause: none of
@@ -168,6 +173,11 @@ describe("recoverSearchParams", () => {
     }
   });
 
+  it("accepts Turkey alongside the Adzuna countries", () => {
+    const params = paramsFrom({ country: "tr", workMode: "onsite", city: "Istanbul" });
+    expect(recoverSearchParams(params)).toMatchObject({ country: "tr", city: "Istanbul" });
+  });
+
   it("returns null for invalid enum or out-of-range values instead of guessing", () => {
     expect(recoverSearchParams(paramsFrom({ country: "zz" }))).toBeNull();
     expect(recoverSearchParams(paramsFrom({ workMode: "hybrid" }))).toBeNull();
@@ -178,5 +188,21 @@ describe("recoverSearchParams", () => {
 
   it("returns null for a too-short query, matching the client-side minimum", () => {
     expect(recoverSearchParams(paramsFrom({ query: "x" }))).toBeNull();
+  });
+});
+
+describe("isTurkeyOnsiteBlocked", () => {
+  it("blocks Turkey on-site — the only combination with no working provider", () => {
+    expect(isTurkeyOnsiteBlocked("tr", "onsite")).toBe(true);
+  });
+
+  it("allows Turkey remote (Remotive covers it)", () => {
+    expect(isTurkeyOnsiteBlocked("tr", "remote")).toBe(false);
+  });
+
+  it("never blocks any other country, on-site or remote", () => {
+    expect(isTurkeyOnsiteBlocked("gb", "onsite")).toBe(false);
+    expect(isTurkeyOnsiteBlocked("gb", "remote")).toBe(false);
+    expect(isTurkeyOnsiteBlocked("de", "onsite")).toBe(false);
   });
 });

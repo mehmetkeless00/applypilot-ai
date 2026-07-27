@@ -34,7 +34,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   ch: "switzerland", de: "germany", es: "spain", fr: "france",
   gb: "united kingdom", in: "india", it: "italy", mx: "mexico",
   nl: "netherlands", nz: "new zealand", pl: "poland", sg: "singapore",
-  us: "usa", za: "south africa",
+  us: "usa", za: "south africa", tr: "turkey",
 };
 
 const REGION_MEMBERSHIP: Record<string, string[]> = {

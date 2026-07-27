@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { JobSearchPanel, type SearchPhase } from "./JobSearchPanel";
 import { getMessages, LOCALES, type Locale } from "@/lib/i18n";
-import { ADZUNA_COUNTRIES, type AdzunaCountry } from "@/lib/jobs/adzuna";
+import { SUPPORTED_COUNTRIES, type SearchCountry } from "@/lib/jobs/countries";
 import {
+  isTurkeyOnsiteBlocked,
   recoverSearchParams,
   runJobSearch,
   type JobSearchRequestBody,
@@ -85,7 +86,7 @@ export function JobSearch({
     recovered?.query ?? (terms.titles[0] ?? terms.skills[0] ?? ""),
   );
   const [queryDirty, setQueryDirty] = useState(Boolean(recovered));
-  const [country, setCountry] = useState<AdzunaCountry>(recovered?.country ?? "gb");
+  const [country, setCountry] = useState<SearchCountry>(recovered?.country ?? "gb");
   const [workMode, setWorkMode] = useState<"remote" | "onsite">(
     recovered?.workMode ?? "remote",
   );
@@ -97,6 +98,14 @@ export function JobSearch({
     recovered?.employmentType ?? "any",
   );
   const [maxDaysOld, setMaxDaysOld] = useState<number>(recovered?.maxDaysOld ?? 0);
+
+  // Turkey has no working on-site provider (see search.ts): show a heads-up
+  // as soon as Turkey is selected, and block the submit itself once
+  // on-site is also selected, so no request that's guaranteed to come
+  // back empty is ever sent.
+  const isTurkey = country === "tr";
+  const onsiteBlocked = isTurkeyOnsiteBlocked(country, workMode);
+  const turkeyNoticeId = "turkey-onsite-notice";
 
   const [phase, setPhase] = useState<SearchPhase>("initial");
   const [formError, setFormError] = useState<string | null>(null);
@@ -143,6 +152,10 @@ export function JobSearch({
 
   async function search(event?: React.FormEvent) {
     event?.preventDefault();
+    // Belt-and-suspenders: the submit button is already disabled for this
+    // combination, but a native form submission (e.g. Enter key with a
+    // disabled submit control) could still reach here.
+    if (onsiteBlocked) return;
     if (query.trim().length < 2) {
       setFormError(t.filters.keywordsRequired);
       return;
@@ -336,6 +349,7 @@ export function JobSearch({
                   onChange={(e) =>
                     setWorkMode(e.target.value === "onsite" ? "onsite" : "remote")
                   }
+                  aria-describedby={isTurkey ? turkeyNoticeId : undefined}
                   className={`mt-1 ${selectClass}`}
                 >
                   <option value="remote">{t.filters.remote}</option>
@@ -348,10 +362,11 @@ export function JobSearch({
                   <select
                     name="country"
                     value={country}
-                    onChange={(e) => setCountry(e.target.value as AdzunaCountry)}
+                    onChange={(e) => setCountry(e.target.value as SearchCountry)}
+                    aria-describedby={isTurkey ? turkeyNoticeId : undefined}
                     className={`mt-1 ${selectClass}`}
                   >
-                    {ADZUNA_COUNTRIES.map((code) => (
+                    {SUPPORTED_COUNTRIES.map((code) => (
                       <option key={code} value={code}>
                         {t.countries[code]}
                       </option>
@@ -424,6 +439,16 @@ export function JobSearch({
             </div>
           </fieldset>
 
+          {isTurkey && (
+            <p
+              id={turkeyNoticeId}
+              role="status"
+              className="rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30"
+            >
+              {t.filters.turkeyOnsiteNotice}
+            </p>
+          )}
+
           {formError && (
             <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {formError}
@@ -431,7 +456,11 @@ export function JobSearch({
           )}
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={phase === "loading"}>
+            <Button
+              type="submit"
+              disabled={phase === "loading" || onsiteBlocked}
+              aria-describedby={isTurkey ? turkeyNoticeId : undefined}
+            >
               {phase === "loading" && <Spinner />}
               {phase === "loading" ? t.filters.searching : t.filters.search}
             </Button>

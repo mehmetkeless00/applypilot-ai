@@ -88,15 +88,25 @@ describe("JobSearchPanel phase rendering", () => {
     expect(html).toContain("Job sources couldn&#x27;t be reached");
   });
 
-  it("shows the not-configured message when no provider is active", () => {
+  it("shows the not-configured message when no provider is active, without naming a provider", () => {
     const results: JobSearchResponse = {
       listings: [],
       providers: { adzuna: "unavailable", remotive: "skipped" },
     };
     const html = render({ phase: "loaded", results });
-    expect(html).toContain("isn&#x27;t available right now");
+    expect(html).toContain("On-site search isn&#x27;t available for the selected country right now");
+    expect(html).not.toContain("Adzuna");
     // No misleading "no results" copy alongside the unavailable notice.
     expect(html).not.toContain("No jobs found");
+  });
+
+  it("shows the same not-configured message for a Turkey on-site search (no provider covers it)", () => {
+    const results: JobSearchResponse = {
+      listings: [],
+      providers: { adzuna: "skipped", remotive: "skipped" },
+    };
+    const html = render({ phase: "loaded", results });
+    expect(html).toContain("On-site search isn&#x27;t available for the selected country right now");
   });
 
   it("shows a partial-failure notice when only one provider failed", () => {

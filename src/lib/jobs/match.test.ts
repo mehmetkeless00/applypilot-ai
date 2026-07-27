@@ -70,6 +70,22 @@ describe("scoreListing", () => {
     expect(onsiteListing.reasons).toContainEqual({ kind: "location", fit: "mismatch" });
   });
 
+  it("recognizes Turkey as a remote-restriction country name", () => {
+    const turkeyRemoteFilters: JobSearchFilters = { ...filters, workMode: "remote", country: "tr", city: undefined };
+    const restricted = scoreListing(
+      cv,
+      turkeyRemoteFilters,
+      listing({ remote: true, remoteRestriction: "USA Only" }),
+    );
+    const open = scoreListing(
+      cv,
+      turkeyRemoteFilters,
+      listing({ remote: true, remoteRestriction: "Turkey" }),
+    );
+    expect(restricted.reasons).toContainEqual({ kind: "location", fit: "mismatch" });
+    expect(open.reasons).toContainEqual({ kind: "location", fit: "match" });
+  });
+
   it("penalizes remote listings restricted to an incompatible region", () => {
     const remoteFilters: JobSearchFilters = { ...filters, workMode: "remote", country: "de" };
     const restricted = scoreListing(

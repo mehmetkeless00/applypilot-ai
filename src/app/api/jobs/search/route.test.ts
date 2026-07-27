@@ -125,6 +125,14 @@ describe("POST /api/jobs/search", () => {
     expect(searchJobsMock).not.toHaveBeenCalled();
   });
 
+  it("accepts Turkey as a valid country", async () => {
+    const res = await POST(makeRequest({ ...validBody, country: "tr", workMode: "onsite", city: "Istanbul" }));
+    expect(res.status).toBe(200);
+    expect(searchJobsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ country: "tr", workMode: "onsite" }),
+    );
+  });
+
   it("returns 404 when the CV version isn't owned or doesn't belong to the resume", async () => {
     versionState.row = null; // RLS-scoped lookup finds nothing
     const res = await POST(makeRequest(validBody));
@@ -153,6 +161,7 @@ describe("POST /api/jobs/search", () => {
   it("consumes no analysis quota and never echoes CV content or credentials", async () => {
     process.env.ADZUNA_APP_ID = "secret-app-id";
     process.env.ADZUNA_APP_KEY = "secret-app-key";
+    const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const res = await POST(makeRequest(validBody));
     expect(res.status).toBe(200);
     const raw = JSON.stringify(await res.json());
@@ -162,6 +171,11 @@ describe("POST /api/jobs/search", () => {
     expect(raw).not.toContain("2 years of experience");
     expect(raw).not.toContain("secret-app-id");
     expect(raw).not.toContain("secret-app-key");
+    // Nothing logged this request either (searchJobsMock resolved cleanly).
+    const logged = logSpy.mock.calls.flat().join(" ");
+    expect(logged).not.toContain("secret-app-id");
+    expect(logged).not.toContain("secret-app-key");
+    logSpy.mockRestore();
     delete process.env.ADZUNA_APP_ID;
     delete process.env.ADZUNA_APP_KEY;
   });

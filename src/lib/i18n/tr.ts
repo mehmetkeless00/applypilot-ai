@@ -413,6 +413,7 @@ export const tr: Messages = {
       search: "İş ara",
       searching: "Aranıyor…",
       keywordsRequired: "Arama için en az bir anahtar kelime girin.",
+      turkeyOnsiteNotice: "Türkiye'de şu anda yalnızca uzaktan iş araması destekleniyor.",
     },
     countries: {
       at: "Avusturya",
@@ -434,19 +435,20 @@ export const tr: Messages = {
       sg: "Singapur",
       us: "Amerika Birleşik Devletleri",
       za: "Güney Afrika",
+      tr: "Türkiye",
     },
     results: {
       heading: "Sonuçlar",
       count: (n: number) => `${n} ilan bulundu`,
       initialHint:
-        "Bir CV seçin, filtreleri ayarlayın ve Adzuna ile Remotive'deki gerçek ilanlarda arama yapın.",
+        "Bir CV seçin, filtreleri ayarlayın ve gerçek iş ilanlarında arama yapın.",
       emptyTitle: "İlan bulunamadı",
       emptyDescription:
         "Daha genel anahtar kelimeler, başka bir ülke veya daha uzun bir yayınlanma aralığı deneyin.",
       partialFailure: "Bazı iş kaynaklarına ulaşılamadı — sonuçlar eksik olabilir.",
       fullFailure: "İş kaynaklarına ulaşılamadı. Az sonra yeniden deneyin.",
       noProviders:
-        "Ofis içi arama şu anda kullanılamıyor — Adzuna kaynağı yapılandırılmamış. Uzaktan arama yapmayı deneyin.",
+        "Seçilen ülke için ofisten çalışma ilanı araması şu anda kullanılamıyor. Uzaktan aramayı deneyin.",
       retry: "Yeniden dene",
     },
     card: {

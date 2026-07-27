@@ -413,6 +413,7 @@ export const en = {
       search: "Search jobs",
       searching: "Searching…",
       keywordsRequired: "Enter at least one role keyword to search.",
+      turkeyOnsiteNotice: "Only remote job search is currently supported in Turkey.",
     },
     countries: {
       at: "Austria",
@@ -434,19 +435,20 @@ export const en = {
       sg: "Singapore",
       us: "United States",
       za: "South Africa",
+      tr: "Turkey",
     },
     results: {
       heading: "Results",
       count: (n: number) => (n === 1 ? "1 job found" : `${n} jobs found`),
       initialHint:
-        "Pick a CV, adjust the filters, and search real listings from Adzuna and Remotive.",
+        "Pick a CV, adjust the filters, and search real job listings.",
       emptyTitle: "No jobs found",
       emptyDescription:
         "Try broader keywords, another country, or a longer posting window.",
       partialFailure: "Some job sources couldn't be reached — results may be incomplete.",
       fullFailure: "Job sources couldn't be reached. Try again in a moment.",
       noProviders:
-        "On-site search isn't available right now — the Adzuna source isn't configured. Try a remote search.",
+        "On-site search isn't available for the selected country right now. Try a remote search.",
       retry: "Try again",
     },
     card: {

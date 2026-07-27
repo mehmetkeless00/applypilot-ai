@@ -7,19 +7,16 @@ const state = vi.hoisted(() => ({
   remotive: null as JobListing[] | Error | null,
 }));
 
+const searchAdzunaMock = vi.hoisted(() => vi.fn());
+const searchRemotiveMock = vi.hoisted(() => vi.fn());
+
 vi.mock("./adzuna", () => ({
   adzunaAvailable: () => state.adzunaAvailable,
-  searchAdzuna: async () => {
-    if (state.adzuna instanceof Error) throw state.adzuna;
-    return state.adzuna ?? [];
-  },
+  searchAdzuna: searchAdzunaMock,
 }));
 
 vi.mock("./remotive", () => ({
-  searchRemotive: async () => {
-    if (state.remotive instanceof Error) throw state.remotive;
-    return state.remotive ?? [];
-  },
+  searchRemotive: searchRemotiveMock,
 }));
 
 import { dedupeListings, searchJobs } from "./search";
@@ -55,6 +52,14 @@ beforeEach(() => {
   state.adzunaAvailable = true;
   state.adzuna = [];
   state.remotive = [];
+  searchAdzunaMock.mockReset().mockImplementation(async () => {
+    if (state.adzuna instanceof Error) throw state.adzuna;
+    return state.adzuna ?? [];
+  });
+  searchRemotiveMock.mockReset().mockImplementation(async () => {
+    if (state.remotive instanceof Error) throw state.remotive;
+    return state.remotive ?? [];
+  });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -126,5 +131,45 @@ describe("searchJobs", () => {
     });
     expect(providers.remotive).toBe("skipped");
     expect(listings.map((l) => l.provider)).toEqual(["adzuna"]);
+  });
+
+  describe("Turkey routing", () => {
+    const turkeyOnsite: JobSearchFilters = {
+      ...remoteFilters,
+      country: "tr",
+      workMode: "onsite",
+      city: "Istanbul",
+    };
+    const turkeyRemote: JobSearchFilters = { ...remoteFilters, country: "tr" };
+
+    // Turkey on-site has no working provider: every third-party source
+    // evaluated for it was rejected (wrong-country results, no Turkey
+    // coverage, or zero real listings). Rather than ship incorrect or
+    // empty-but-misleading data, Turkey on-site never calls any provider
+    // and always reports both as "skipped" — the UI also prevents this
+    // request client-side (see JobSearch.test.tsx), this is the
+    // server-side defense-in-depth guarantee.
+    it("never calls any provider for Turkey on-site search", async () => {
+      const { listings, providers } = await searchJobs(turkeyOnsite);
+      expect(providers).toEqual({ adzuna: "skipped", remotive: "skipped" });
+      expect(listings).toEqual([]);
+      expect(searchAdzunaMock).not.toHaveBeenCalled();
+      expect(searchRemotiveMock).not.toHaveBeenCalled();
+    });
+
+    it("routes Turkey remote searches to Remotive only, never Adzuna", async () => {
+      state.remotive = [listing({ id: "remotive:1", provider: "remotive" })];
+      const { listings, providers } = await searchJobs(turkeyRemote);
+      expect(providers).toEqual({ adzuna: "skipped", remotive: "ok" });
+      expect(listings.map((l) => l.provider)).toEqual(["remotive"]);
+      expect(searchAdzunaMock).not.toHaveBeenCalled();
+    });
+
+    it("a Remotive failure on Turkey remote search still reports cleanly", async () => {
+      state.remotive = new Error("remotive down");
+      const { listings, providers } = await searchJobs(turkeyRemote);
+      expect(listings).toEqual([]);
+      expect(providers).toEqual({ adzuna: "skipped", remotive: "failed" });
+    });
   });
 });

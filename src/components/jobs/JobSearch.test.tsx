@@ -86,6 +86,55 @@ describe("JobSearch filters", () => {
     expect(html).toMatch(/<form[^>]*method="get"/);
   });
 
+  it("includes Turkey in the country selector alongside the Adzuna countries", () => {
+    const html = renderToStaticMarkup(<JobSearch resumes={resumes} locale="en" />);
+    expect(html).toContain('<option value="tr">Turkey</option>');
+    expect(html).toContain('United Kingdom');
+  });
+
+  // Turkey has no working on-site provider (every third-party source
+  // evaluated for it was rejected — see search.ts). Rather than let the
+  // user submit a search that's guaranteed to come back empty, on-site is
+  // disabled client-side for Turkey specifically, with an accessible
+  // explanation. Since this component reads its initial country/workMode
+  // from the recovered native-fallback query string (computed from
+  // `window.location.search` at mount), a minimal `window` stub lets a
+  // plain renderToStaticMarkup pass — no jsdom needed.
+  function renderWithRecovered(query: string) {
+    (globalThis as { window?: unknown }).window = { location: { search: query } };
+    try {
+      return renderToStaticMarkup(<JobSearch resumes={resumes} locale="en" />);
+    } finally {
+      delete (globalThis as { window?: unknown }).window;
+    }
+  }
+
+  const RECOVERED_BASE =
+    "resumeId=resume-1&resumeVersionId=version-2&query=developer" +
+    "&experienceLevel=any&employmentType=any&maxDaysOld=0";
+
+  it("shows the Turkey notice and disables Search jobs for Turkey + on-site", () => {
+    const html = renderWithRecovered(
+      `?${RECOVERED_BASE}&country=tr&workMode=onsite&city=Istanbul`,
+    );
+    expect(html).toContain("Only remote job search is currently supported in Turkey.");
+    expect(html).toContain('id="turkey-onsite-notice"');
+    expect(html).toContain('aria-describedby="turkey-onsite-notice"');
+    expect(html).toMatch(/type="submit"[^>]*disabled=""/);
+  });
+
+  it("shows the Turkey notice but keeps Search jobs enabled for Turkey + remote", () => {
+    const html = renderWithRecovered(`?${RECOVERED_BASE}&country=tr&workMode=remote`);
+    expect(html).toContain("Only remote job search is currently supported in Turkey.");
+    expect(html).not.toMatch(/type="submit"[^>]*disabled=""/);
+  });
+
+  it("shows no Turkey notice and no disabling for a non-Turkey country", () => {
+    const html = renderWithRecovered(`?${RECOVERED_BASE}&country=de&workMode=onsite&city=Berlin`);
+    expect(html).not.toContain("Only remote job search is currently supported in Turkey.");
+    expect(html).not.toMatch(/type="submit"[^>]*disabled=""/);
+  });
+
   it("renders the full Turkish experience", () => {
     const html = renderToStaticMarkup(<JobSearch resumes={resumes} locale="tr" />);
     expect(html).toContain("Arama filtreleri");
@@ -101,6 +150,23 @@ describe("JobSearch filters", () => {
     expect(html).toContain("Backend Developer");
     expect(html).toContain("PostgreSQL");
     expect(html).not.toContain("Search jobs");
+  });
+
+  it("shows the Turkey notice in Turkish and disables the button for on-site", () => {
+    (globalThis as { window?: unknown }).window = {
+      location: {
+        search: `?${RECOVERED_BASE}&country=tr&workMode=onsite&city=Istanbul`,
+      },
+    };
+    try {
+      const html = renderToStaticMarkup(<JobSearch resumes={resumes} locale="tr" />);
+      expect(html).toContain(
+        "Türkiye&#x27;de şu anda yalnızca uzaktan iş araması destekleniyor.",
+      );
+      expect(html).toMatch(/type="submit"[^>]*disabled=""/);
+    } finally {
+      delete (globalThis as { window?: unknown }).window;
+    }
   });
 
   it("mounts the analyze-confirmation dialog with accessible semantics", () => {

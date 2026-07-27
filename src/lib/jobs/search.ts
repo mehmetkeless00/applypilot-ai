@@ -45,15 +45,29 @@ export function dedupeListings(listings: JobListing[]): JobListing[] {
 }
 
 /**
- * Searches the applicable providers. Remotive only serves remote jobs, so
- * it's skipped for onsite city searches; Adzuna is skipped (with status
+ * Searches the applicable providers. Adzuna doesn't support Turkey, so
+ * Turkey searches never reach it. Turkey remote searches use Remotive.
+ * Turkey on-site search has no working provider — every third-party
+ * source evaluated for it was rejected (no Turkey coverage, or results
+ * that couldn't be reliably scoped to the country) — so it always reports
+ * both providers "skipped" and returns no listings; the UI additionally
+ * prevents the request client-side (see JobSearch.tsx) so this is a
+ * defense-in-depth fallback, not the primary guard. For every other
+ * supported country, Remotive is skipped on on-site searches (its
+ * listings are remote-only) and Adzuna is skipped (with status
  * "unavailable") when its server credentials aren't configured.
  */
 export async function searchJobs(filters: JobSearchFilters): Promise<JobSearchOutcome> {
-  const statuses: Record<JobProvider, ProviderStatus> = {
-    adzuna: adzunaAvailable() ? "ok" : "unavailable",
-    remotive: filters.workMode === "remote" ? "ok" : "skipped",
-  };
+  const isTurkey = filters.country === "tr";
+
+  const statuses: Record<JobProvider, ProviderStatus> = isTurkey
+    ? filters.workMode === "onsite"
+      ? { adzuna: "skipped", remotive: "skipped" }
+      : { adzuna: "skipped", remotive: "ok" }
+    : {
+        adzuna: adzunaAvailable() ? "ok" : "unavailable",
+        remotive: filters.workMode === "remote" ? "ok" : "skipped",
+      };
 
   const tasks: { provider: JobProvider; run: () => Promise<JobListing[]> }[] = [];
   if (statuses.adzuna === "ok") {
