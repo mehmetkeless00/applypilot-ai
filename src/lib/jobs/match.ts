@@ -29,7 +29,7 @@ const MANDATORY_PENALTY_EACH = 8;
 const MANDATORY_PENALTY_CAP = 24;
 
 /** English names used to test remote-eligibility restrictions. */
-const COUNTRY_NAMES: Record<string, string> = {
+export const COUNTRY_NAMES: Record<string, string> = {
   at: "austria", au: "australia", be: "belgium", br: "brazil", ca: "canada",
   ch: "switzerland", de: "germany", es: "spain", fr: "france",
   gb: "united kingdom", in: "india", it: "italy", mx: "mexico",
@@ -37,7 +37,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   us: "usa", za: "south africa", tr: "turkey",
 };
 
-const REGION_MEMBERSHIP: Record<string, string[]> = {
+export const REGION_MEMBERSHIP: Record<string, string[]> = {
   emea: ["at", "be", "ch", "de", "es", "fr", "gb", "it", "nl", "pl", "za"],
   europe: ["at", "be", "ch", "de", "es", "fr", "gb", "it", "nl", "pl"],
   eu: ["at", "be", "de", "es", "fr", "it", "nl", "pl"],
@@ -52,7 +52,7 @@ const REGION_MEMBERSHIP: Record<string, string[]> = {
   canada: ["ca"],
 };
 
-function tokenize(text: string): string[] {
+export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9çğıöşü+#.]+/)
@@ -77,7 +77,7 @@ export function detectListingSeniority(
   return null;
 }
 
-const JUNIOR_LEVELS: ExperienceLevel[] = ["internship", "entry", "junior"];
+export const JUNIOR_LEVELS: ExperienceLevel[] = ["internship", "entry", "junior"];
 
 /**
  * Sentences that declare a requirement mandatory; any dictionary skill in

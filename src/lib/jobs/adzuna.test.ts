@@ -55,7 +55,11 @@ describe("buildAdzunaUrl", () => {
     expect(url.searchParams.get("part_time")).toBeNull();
   });
 
-  it("omits unset filters and uses the remote keyword for remote mode", () => {
+  it("omits unset filters and folds a remote keyword into 'what' for remote mode", () => {
+    // Regression: "where" is a geocoded location field — where=remote
+    // matched 0 results for every country (confirmed against the live
+    // API), since "remote" isn't a real place. The keyword belongs in
+    // "what", which Adzuna actually searches against title/description.
     const url = new URL(
       buildAdzunaUrl({
         ...filters,
@@ -64,9 +68,22 @@ describe("buildAdzunaUrl", () => {
         maxDaysOld: 0,
       }),
     );
-    expect(url.searchParams.get("where")).toBe("remote");
+    expect(url.searchParams.get("where")).toBeNull();
+    expect(url.searchParams.get("what")).toBe("frontend developer remote");
     expect(url.searchParams.get("max_days_old")).toBeNull();
     expect(url.searchParams.get("full_time")).toBeNull();
+  });
+
+  it("doesn't duplicate the remote keyword when the query already mentions it", () => {
+    const url = new URL(
+      buildAdzunaUrl({
+        ...filters,
+        query: "remote frontend developer",
+        workMode: "remote",
+      }),
+    );
+    expect(url.searchParams.get("what")).toBe("remote frontend developer");
+    expect(url.searchParams.get("where")).toBeNull();
   });
 });
 

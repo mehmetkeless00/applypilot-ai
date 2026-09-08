@@ -33,13 +33,22 @@ export function buildAdzunaUrl(filters: JobSearchFilters): string {
   url.searchParams.set("app_id", process.env.ADZUNA_APP_ID ?? "");
   url.searchParams.set("app_key", process.env.ADZUNA_APP_KEY ?? "");
   url.searchParams.set("results_per_page", String(ADZUNA_RESULTS_PER_PAGE));
-  url.searchParams.set("what", filters.query);
   if (filters.workMode === "onsite" && filters.city) {
     url.searchParams.set("where", filters.city);
   }
   if (filters.workMode === "remote") {
-    // Adzuna has no remote flag; narrow with the keyword instead.
-    url.searchParams.set("where", "remote");
+    // Adzuna has no remote flag and "where" is a geocoded location field —
+    // setting where=remote doesn't match anything (confirmed live: 0
+    // results for every country) since "remote" isn't a real place Adzuna
+    // can resolve. Narrow with a keyword in "what" instead, which Adzuna
+    // actually searches against titles/descriptions.
+    const alreadyMentionsRemote = /\bremote\b/i.test(filters.query);
+    url.searchParams.set(
+      "what",
+      alreadyMentionsRemote ? filters.query : `${filters.query} remote`,
+    );
+  } else {
+    url.searchParams.set("what", filters.query);
   }
   if (filters.maxDaysOld > 0) {
     url.searchParams.set("max_days_old", String(filters.maxDaysOld));

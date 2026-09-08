@@ -5,8 +5,8 @@ import { getMessages } from "@/lib/i18n";
 import { getLocale } from "@/lib/i18n/server";
 import { fetchVersion } from "@/lib/resumes/resumes";
 import { SUPPORTED_COUNTRIES } from "@/lib/jobs/countries";
-import { scoreListing } from "@/lib/jobs/match";
 import { checkSearchRateLimit } from "@/lib/jobs/ratelimit";
+import { rankListings } from "@/lib/jobs/relevance";
 import { searchJobs } from "@/lib/jobs/search";
 import { extractSkills } from "@/lib/jobs/skills";
 
@@ -80,17 +80,14 @@ export async function POST(request: Request) {
     const cvSkills = extractSkills(version.content ?? "");
 
     const { listings, providers } = await searchJobs(filters);
-    const scored = listings
-      .map((listing) => ({
-        ...listing,
-        match: scoreListing(
-          { cvSkills, roleKeywords: filters.query },
-          filters,
-          listing,
-        ),
-      }))
-      .sort((a, b) => b.match.score - a.match.score)
-      .slice(0, MAX_RESULTS);
+    // Stage 1 (hard filter: location/employment/seniority/relevance) then
+    // Stage 2 (Estimated Match, computed only on survivors), sorted by
+    // relevance, then match score, then posting recency.
+    const scored = rankListings(
+      listings,
+      filters,
+      { cvSkills, roleKeywords: filters.query },
+    ).slice(0, MAX_RESULTS);
 
     return NextResponse.json({ listings: scored, providers });
   } catch (err) {
