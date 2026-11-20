@@ -8,12 +8,12 @@ on CV–job fit. Every model change in the ML plan is judged against this.
 | Path | What lives there |
 |---|---|
 | `data/cvs/` | Synthetic CV personas, one Markdown file each. YAML front matter is metadata for us; the runner strips it before any system sees the CV. |
-| `data/jobs/` | `snapshot.jsonl` holds the frozen listing text and is **gitignored**. `index.csv` (job ID, provider, URL) is committed. Frozen so every run scores the same text. |
+| `data/jobs/` | `snapshot.jsonl` holds the frozen listing text and is **gitignored**. `index.csv` (job ID, provider, URL) and `pools.json` (each CV's own and neighbour candidates) are committed. Frozen so every run scores the same text. |
 | `data/pairs.csv` | Every CV–job pair to label, with its selection bucket and language tag. Committed. |
-| `data/labels/` | Human labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. Ground truth. Committed. |
+| `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. Each row keeps the LLM draft and the reviewed final label separately. Ground truth. Committed. |
 | `work/` | Rendered labelling sheets that contain listing text. **Gitignored.** |
 | `cache/` | Cached model responses keyed by a hash of model + input. Makes Gemini runs reproducible and free to re-run. |
-| `scripts/` | TypeScript runner (calls the app's real scoring code) and the Python metrics script. |
+| `scripts/` | `collect-jobs.ts` builds the snapshot, `build-pairs.ts` picks the pairs (fixed seed), `render-sheet.ts` writes blind labelling sheets. Later: the system runner and the Python metrics script. |
 | `results/` | One dated JSON file and Markdown table per run. Never edited by hand. |
 | `LABELLING_GUIDE.md` | The 0–3 scale and rules. Read before every labelling session. |
 
@@ -32,6 +32,47 @@ Consequences for the results:
 - Hard professional requirements (a licence, a degree, a required spoken
   language) are not logistics and still count. See the labelling guide.
 
+## Labelling method
+
+Going forward, the dataset uses **LLM-drafted, human-reviewed labels**:
+
+1. An LLM drafts a label (0 to 3), a short rationale and a listing flag
+   for each pair, following `LABELLING_GUIDE.md`. It sees only the CV text
+   and the listing text, never a system score, the selection bucket or
+   persona metadata. The drafting model must not be one of the systems
+   under evaluation, and each drafting run records its model identifier
+   and prompt version in the experiment log.
+2. The reviewer reviews every pair and either accepts the draft or assigns
+   a different final label.
+
+The draft (`draft_label`) and the final label (`label`) are stored
+separately. `reviewed_change` is blank while review is pending, then `yes`
+if the final label differs from the draft or `no` if the draft was
+accepted. A pair counts as reviewed only once the reviewer has filled it
+in. Editing only the rationale is not a label change.
+
+**Change rate** = `yes` ÷ (`yes` + `no`), over reviewed pairs only. It is
+reported with every result, because it shows how much the final labels
+still depend on the reviewer rather than the draft.
+
+Metrics use the final `label` of reviewed pairs only.
+
+## Reporting subgroups
+
+Every result reports these counts first, then the metrics:
+
+| Subgroup | Definition | In job-fit metrics? |
+|---|---|---|
+| Non-job | `flag=non_job` in the labels | **No**, counted only |
+| Genuine, thin | not non-job, `listing_quality=thin` | Yes, also reported separately |
+| Genuine, full | not non-job, `listing_quality=full` | Yes, also reported separately |
+| Same / cross language | `language_pair` in `pairs.csv` | Yes, also reported separately |
+| Pending review | `reviewed_change` blank | **No**, counted only |
+
+`listing_quality` is computed when pairs are built, before any label is
+drafted or reviewed: `thin` means the provider truncated the text or it
+is under 1,000 characters.
+
 ## Language subgroups
 
 Every pair is tagged `same` or `cross` language, comparing the CV's
@@ -45,6 +86,11 @@ matches shared words.
 Ten pairs are labelled first and compared against the guide; the guide is
 adjusted if needed. They come from `data/labels/calibration-pairs.csv`,
 are disjoint from `pairs.csv`, and never enter the final metrics.
+
+Round 1 (2026-11-20) changed the guide in three places: past work in the
+listing's field, required core frameworks, and listing quality. All 10
+calibration listings were truncated; 2 of the 10 (cal-05, cal-06) were not
+real job postings. Details in `docs/experiment-log.md`, E003.
 
 ## Data policy
 
@@ -67,10 +113,24 @@ Train / dev / test are split **by CV**, never by pair, so the same person
 never appears on both sides. The split is fixed once in `data/splits.json`
 and never changed after the first result is recorded.
 
+## Known data limits
+
+- Adzuna cuts descriptions at 500 characters, and most snippets don't
+  state requirements. The app scores the same snippets, so results
+  reflect production, but labels on thin pairs are less certain. Thin
+  pairs are marked in `pairs.csv` and reported as a subgroup.
+- Some listings are not real jobs (training programmes, self-employment
+  pitches). They are flagged `non_job` and excluded from job-fit metrics.
+- Remotive's public API returns only 15 listings, so nearly all listings
+  come from Adzuna.
+
 ## Workflow
 
-1. Freeze the job snapshot.
-2. Label every pair following `LABELLING_GUIDE.md`.
-3. Run the systems; predictions are written next to the cache.
-4. Run the metrics script; it writes `results/<date>.json` and a table.
-5. Record what happened in `docs/experiment-log.md`, including failures.
+1. Freeze the job snapshot: `npx tsx eval/scripts/collect-jobs.ts`.
+2. Build pairs: `npx tsx eval/scripts/build-pairs.ts`.
+3. Render a sheet: `npx tsx eval/scripts/render-sheet.ts main 1 60`.
+4. Draft labels with the LLM, then review every pair
+   (`LABELLING_GUIDE.md`, "Process rules").
+5. Run the systems; predictions are written next to the cache.
+6. Run the metrics script; it writes `results/<date>.json` and a table.
+7. Record what happened in `docs/experiment-log.md`, including failures.

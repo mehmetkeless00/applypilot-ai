@@ -1,0 +1,11 @@
+pair_id,cv_id,job_id,bucket,cv_language,job_language,language_pair,desc_chars,truncated,listing_quality
+cal-01,cv-01,adzuna:5945986185,own,en,en,same,500,yes,thin
+cal-02,cv-02,adzuna:5930845818,own,tr,en,cross,500,yes,thin
+cal-03,cv-03,adzuna:5961932663,neighbour,en,unknown,unknown,500,yes,thin
+cal-04,cv-08,adzuna:5966771365,neighbour,en,es,cross,500,yes,thin
+cal-05,cv-11,adzuna:5938208205,random,en,en,same,500,yes,thin
+cal-06,cv-15,adzuna:5954321973,own,en,en,same,500,yes,thin
+cal-07,cv-18,adzuna:5955782400,own,en,en,same,500,yes,thin
+cal-08,cv-27,adzuna:5963491816,neighbour,en,nl,cross,500,yes,thin
+cal-09,cv-28,adzuna:5829340865,neighbour,tr,en,cross,500,yes,thin
+cal-10,cv-30,adzuna:5948654739,neighbour,en,en,same,500,yes,thin

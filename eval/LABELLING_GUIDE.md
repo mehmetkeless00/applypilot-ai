@@ -9,6 +9,12 @@ You are answering one question per pair:
 Read this guide before every session. Consistency matters more than
 being "right": a model can learn a consistent judge, not a moody one.
 
+Labels are **LLM-drafted, human-reviewed labels**: an LLM drafts a label,
+a rationale and a listing flag for each pair using this guide; the human
+reviewer then reviews every pair and either accepts the draft or assigns
+a different final label. Both the drafter and the reviewer apply the same
+rules below.
+
 ## The scale
 
 | Score | Name | Recruiter's reaction | Rule of thumb |
@@ -49,11 +55,139 @@ customer calls" are blockers and can force a 0.
 - **Years of experience** requirements count, but loosely: 4 years against
   "5+ years" is not a gap; 1 year against "5+ years" is.
 - **Equivalent technologies** count when a recruiter would accept them:
-  PostgreSQL for "MySQL", GCP for "AWS" in a general cloud role. Not across
-  real boundaries: React is not Angular for a senior Angular role.
+  PostgreSQL for "MySQL", GCP for "AWS" in a general cloud role. This does
+  **not** apply to a required core framework; see "Required core
+  frameworks" below.
 - **Language of the CV** does not matter. A Turkish CV for an English
   listing is judged on content. Only an explicit spoken-language
   requirement can matter (see exception above).
+
+## Past work in the listing's field
+
+Career changers often have earlier work in the field a listing belongs
+to. Whether it counts depends on **what they did**, not where they did it.
+
+- **Performing the advertised duties counts.** If an earlier role had the
+  candidate doing the day-to-day work this listing describes, treat it as
+  relevant experience even though it is not their current role, provided
+  they did it for **at least 1 year** and it ended **within the last 3
+  years** (counted to the labelling date). It can support a 2 or a 3 under
+  the normal rules.
+- **Older duty experience is adjacent only.** The same work that ended
+  more than 3 years ago can support a 1, never a 2 by itself.
+- **Same industry, different role does not count as duty experience.** A
+  developer at a marketing agency has not done marketing; a salesperson at
+  a SaaS company has not built software. This is domain familiarity. It
+  meets a must-have only when the listing explicitly requires knowledge of
+  that domain, and it never lifts a score above what duty evidence supports.
+- **The candidate's current direction does not matter.** Label the fit,
+  not whether the candidate would want the job.
+
+**Applied to cal-03** (cv-03 against a *Digital Marketing Specialist*
+listing, Ukrainian text, truncated). The deciding evidence:
+- Listing: creative marketing work on ad ideas and their measured results;
+  it says candidates can come from SMM, digital, influencer or brand
+  marketing, copywriting or small-business marketing; prior marketing
+  experience is expected; performance-creative experience is *not*
+  required.
+- CV: *Digital Marketing Specialist*, April 2020 to March 2025. She ran
+  paid search and social campaigns, built and A/B tested landing pages,
+  and set up conversion tracking.
+- That is the advertised duties, for about 5 years, ending 20 months before
+  the labelling date, from a background the listing explicitly accepts.
+  It counts as duty experience.
+- Not a 3: the listing centres on creative ad concepts, and the CV shows
+  campaign management and testing rather than creative production.
+- **Revised-rule result: 2.** This matches what the old guide gave; see
+  the experiment log (E003) on why that differs from the score the persona
+  design expected.
+
+## Required core frameworks
+
+A **core framework** is the main application framework or platform the
+role is built around: React, Angular, Vue, Django, Spring, Laravel, .NET,
+Rails, SwiftUI/UIKit, Flutter and the like. Databases, cloud providers,
+CI tools and libraries are not core frameworks; the equivalence rule above
+applies to them.
+
+A core framework is **required** when it appears in the job title or under
+requirements, "must" or "essential". It is **preferred** when it appears
+under "nice to have", "bonus", "preferred" or "a plus".
+
+When the listing requires a core framework the CV does not show:
+
+| Evidence in the CV | Score |
+|---|---|
+| Paid work or a substantial shipped product using the **named** framework | Judge normally (can be 2 or 3) |
+| The listing **explicitly** accepts an alternative ("React or Vue", "a modern framework such as React"), and the CV shows paid work with an accepted alternative | Judge normally (can be 2 or 3) |
+| Same role type and seniority, with paid work in a different framework from the **same ecosystem** (Flask or FastAPI for a Django role) | **2**, unless other gaps lower it |
+| Same role type and seniority, with paid work in a framework from a **different ecosystem** (Angular for a React role) | **1** |
+| Side projects, courses, "familiar with" or "learning" the named framework | Does not count as evidence; use the row above or below |
+| No comparable framework experience | **0 or 1** under the other rules |
+
+**Same ecosystem** means the same programming language **and** the same
+framework family, where libraries, patterns and tooling largely carry
+over. Use this list rather than judging case by case:
+
+| Ecosystem | Frameworks treated as the same ecosystem |
+|---|---|
+| Python web backend | Django, Flask, FastAPI |
+| JVM web backend | Spring / Spring Boot, Quarkus, Micronaut |
+| Node.js backend | Express, NestJS, Fastify, Koa |
+| PHP web | Laravel, Symfony |
+| Ruby web | Rails, Sinatra |
+| .NET web | ASP.NET Core, ASP.NET MVC / Web API |
+
+Everything else is a **different ecosystem**, including:
+- Frontend frameworks. React, Angular, Vue and Svelte are each their own
+  ecosystem. They share a language, but their component model, state
+  management and tooling differ, so sharing TypeScript is not enough.
+- Native mobile platforms. iOS (Swift, SwiftUI, UIKit) and Android
+  (Kotlin, Jetpack) are separate.
+- Cross-platform against native mobile, such as Flutter or React Native
+  for an iOS role.
+- Any pair in different programming languages, such as Django and Spring.
+
+If a framework isn't listed, it counts as a different ecosystem unless
+you add it to this table first and record the change in the experiment
+log.
+
+- **The listing can widen equivalence, never the labeller.** An
+  alternative the listing explicitly accepts counts like the named
+  framework. Beyond the same-ecosystem rule, never treat a framework as
+  equivalent because a good engineer could learn it.
+- **A missing preferred framework never caps the score.** It can separate
+  a 3 from a 2 at most, and never moves a 2 down to a 1 by itself.
+
+**Applied to cal-04** (cv-08 against *Senior Frontend Developer (React)*,
+Spanish text, truncated):
+- React is in the title, so it is a required core framework. The visible
+  text names no accepted alternative.
+- The CV shows 6 years of paid Angular work at senior level. That is the
+  same role type and seniority, but Angular and React are different
+  ecosystems.
+- Its only React evidence is "Familiar with React (side projects only)",
+  which does not count.
+- **Result: 1.**
+
+## Listing quality
+
+Two separate properties, recorded separately:
+
+- **Thin** is computed automatically when pairs are built, **before any
+  label is drafted or reviewed**: a listing is `thin` when the provider
+  truncated it (the text ends with "…") or it is shorter than 1,000
+  characters; otherwise it is `full`. It appears in `pairs.csv` as
+  `truncated`, `desc_chars` and `listing_quality`. Label thin pairs from
+  the visible text as usual; they are reported as a separate subgroup.
+- **Non-job** is a judgement, drafted and then reviewed with the label:
+  set `flag=non_job` when the listing is not a real opening for a specific
+  role. Examples: training or career programmes, courses, self-employment
+  or recruitment pitches, generic talent-pool ads. Still record a 0 to 3
+  label, but non-job pairs are excluded from every job-fit metric.
+
+All 10 calibration listings were truncated by the provider. Two of them,
+cal-05 and cal-06, were also not real job postings.
 
 ## Worked examples
 
@@ -64,7 +198,13 @@ direct evidence; the missing item is only nice-to-have.
 
 **Score 2, one gap.** Same listing. CV: 4 years of Flask and FastAPI REST
 services on PostgreSQL, no Django. → Same kind of work, one named framework
-missing that a good engineer picks up quickly. Phone screen: yes.
+missing that a good engineer picks up quickly. Flask and FastAPI are in the
+same ecosystem as Django (see "Required core frameworks"). Phone screen: yes.
+
+**Score 1, required framework from a different ecosystem.** Listing:
+*Senior Frontend Developer, React required.* CV: senior Angular developer,
+React only in side projects. → Same role and level, but a different
+ecosystem, and side projects don't count (this is cal-04).
 
 **Score 2, seniority one step off.** Listing: *Senior Data Engineer, 6+
 years, Spark, Airflow, cloud data warehouse.* CV: mid-level, 4 years with
@@ -93,10 +233,12 @@ degree. → Required licence missing.
 
 ## Edge cases
 
-- **Description too short to judge** (a two-line snippet): give your best
-  label **and** set `flag=thin`. These pairs are analysed separately.
-- **Listing is not a real job** (an ad, a course, a duplicate): set
-  `flag=invalid`; it is excluded.
+- **Description too short to judge:** thin listings are flagged
+  automatically (see "Listing quality"). Give your best label from the
+  visible text and set `confidence=low` if the deciding information is
+  missing.
+- **Listing is not a real job:** set `flag=non_job` (see "Listing
+  quality").
 - **Genuinely torn between two scores:** pick the lower one and set
   `confidence=low`. Do not invent half points.
 - **CV fits a different role at the same company better:** irrelevant.
@@ -108,32 +250,59 @@ Before the main labelling, label the 10 calibration pairs. Compare them
 with the guide, note any rule you had to guess, and update the guide.
 Calibration pairs never enter the final metrics.
 
+Round 1 (2026-11-20) led to three changes, recorded in the experiment log
+(E003, refined in E004): the past-duties rule (cal-03), the
+required-core-framework rule (cal-04) and the listing-quality definitions.
+
 ## Process rules
 
-1. **Blind labelling.** Never look at any system's score for a pair before
-   labelling it. The labelling order is shuffled for this reason.
-2. **One sitting = at most 60 pairs.** Fatigue makes labels drift.
-3. **About one minute per pair.** Skim the listing's requirements first,
+1. **Drafting.** An LLM drafts `draft_label`, `notes` (the rationale) and
+   `flag` for each pair from this guide, the CV text and the listing
+   text only. It never sees any system's score, the selection bucket or
+   the persona metadata. The drafting model must not be one of the systems
+   under evaluation. Record its model identifier and prompt version in the
+   experiment log for each drafting run. `draft_label` is never edited
+   after drafting.
+2. **Review.** Read the listing and the CV before reading the draft, then
+   compare. Accept the draft or assign a different final `label`, and fill
+   in `reviewed_change` and `labelled_at`. A pair counts as reviewed only
+   after the reviewer has done this; until then `label`,
+   `reviewed_change` and `labelled_at` stay blank. Never look at any
+   system's score before reviewing. The labelling order is shuffled.
+3. **One sitting = at most 60 pairs.** Fatigue makes labels drift.
+4. **About one minute per pair.** Skim the listing's requirements first,
    then the CV.
-4. **Don't revise old labels** after seeing results. If you realise a rule
+5. **Don't revise old labels** after seeing results. If you realise a rule
    was wrong, write it in the experiment log and decide whether to
    re-label everything under the new rule.
-5. **One week later**, re-label the 50 pairs listed in
-   `data/labels/relabel-sample.txt` without looking at your first labels.
+6. **One week later**, re-label the 50 pairs listed in
+   `data/labels/relabel-sample.txt` without looking at your first labels
+   or the drafts.
 
 ## File format
 
-`data/labels/labels.csv`, one row per pair:
+`data/labels/labels.csv` (and `calibration-labels.csv`), one row per pair:
 
 ```
-cv_id,job_id,label,confidence,flag,notes,labelled_at
-cv-01,adzuna:4812231,2,high,,missing Django,2026-11-24
-cv-03,remotive:19022,0,high,,sales role,2026-11-24
-cv-07,adzuna:4810087,1,low,thin,two-line snippet,2026-11-24
+pair_id,cv_id,job_id,draft_label,label,reviewed_change,confidence,flag,notes,labelled_at
+p-example-1,cv-xx,adzuna:0000000001,2,2,no,high,,core stack matches; one tool missing,2026-11-24
+p-example-2,cv-xx,adzuna:0000000002,2,1,yes,low,,required core framework missing,2026-11-24
+p-example-3,cv-xx,adzuna:0000000003,0,0,no,high,non_job,self-employment pitch,2026-11-24
+p-example-4,cv-xx,adzuna:0000000004,2,,,,,SQL and BI match; seniority above,
 ```
 
-- `label`: 0, 1, 2 or 3.
-- `confidence`: `high` or `low`.
-- `flag`: empty, `thin` or `invalid`.
-- `notes`: a few words on the deciding factor. These are what make the
-  "what didn't work" analysis possible later.
+| Column | Written by | Meaning |
+|---|---|---|
+| `draft_label` | drafting LLM | 0 to 3. The original draft; never edited. |
+| `label` | reviewer | Final label, 0 to 3. Blank until reviewed. |
+| `reviewed_change` | reviewer | Blank until reviewed. `yes` if `label` differs from `draft_label`, `no` if the draft was accepted. |
+| `confidence` | reviewer | `high` or `low`. |
+| `flag` | drafted, then reviewed | Empty, or `non_job`. Thinness is not recorded here; it is in `pairs.csv`. |
+| `notes` | drafted, then reviewed | Rationale: the deciding factor in a few words. The reviewer may edit it. |
+| `labelled_at` | reviewer | Date the final label was assigned. Blank until reviewed. |
+
+The rows are illustrative, not real pairs. The last one is still pending review.
+
+**Change rate** = number of `yes` ÷ number of reviewed pairs (`yes` +
+`no`). Pending pairs are not counted. Only a label difference is a change:
+editing `notes` or `flag` while keeping the draft's label is `no`.

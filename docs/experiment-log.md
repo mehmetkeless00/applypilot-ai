@@ -59,3 +59,142 @@ didn't work" section.
   committed, because provider redistribution terms are unconfirmed.
 - **Calibration set.** Ten pairs labelled first to test the guide. They are
   excluded from the final dataset.
+
+## E002 — CV set and job snapshot v1 (2026-11-20)
+
+**Question:** can the providers supply a usable pool of listings for 30 personas?
+
+**Setup:** `eval/scripts/collect-jobs.ts`; one Remotive feed request,
+two Adzuna searches per CV (own role and neighbouring role) in the CV's
+`search_country`; pairs from `eval/scripts/build-pairs.ts`, seed 20261120.
+
+**Result:**
+- **Remotive returns only 15 listings**, whatever the parameters.
+  Category and unfiltered requests give the same 15. This also caps the
+  app's own remote search, which is a product finding, not just an eval one.
+- **Long queries fail on Adzuna.** The first run used role queries with
+  seniority and tools ("junior data analyst sql power bi"); 8 of 60
+  returned nothing, because Adzuna requires every word. Shortened to the
+  core role ("data analyst") for 14 queries; every query then returned at
+  least 8 results. Seniority now varies within each pool, which tests the
+  seniority logic instead of filtering it out.
+- **Adzuna descriptions are cut at 500 characters** (1,052 of 1,067
+  listings). Only about 1 in 5 snippets (215 of 1,052) mentions
+  requirements at all; many are company blurbs. The app's search scores
+  exactly these snippets, so they are production-realistic, but they may
+  be too thin to label reliably.
+- **A third of listings are not in English** (German 124, Dutch 100,
+  Spanish 37, French 30, Polish 28), so cross-language pairs come from
+  English CVs too, not only Turkish ones.
+- Dataset: 1,067 listings; 450 main pairs (240 own, 150 neighbour,
+  60 random; 229 same-language, 213 cross, 8 unknown) plus 10 calibration
+  pairs, disjoint.
+- **CVs are short.** Median about 200 words, range 83 to 394. Real CVs
+  are often longer. Added to the synthetic-style limitation in E001.
+
+**Conclusion:** the pool is big enough, but snippet length is the main
+threat to label quality. Calibration must answer whether snippets can be
+labelled consistently.
+
+**Next:** label the calibration set, then decide how to handle thin
+listings before the main labelling.
+
+## E003 — Calibration round 1 and labelling method (2026-11-20)
+
+**Question:** can the guide be applied consistently, and what has to
+change before the main labelling?
+
+**Labelling method, going forward:** the dataset uses
+**LLM-drafted, human-reviewed labels**. An LLM drafts a label, a rationale and a listing
+flag for every pair from the guide, the CV text and the listing text; the
+reviewer then reviews every pair and either accepts the draft or assigns a
+different final label. The drafting model must not be one of the systems
+under evaluation; each drafting run records its model identifier and
+prompt version here.
+
+**Label schema:** `draft_label` (the original draft, never edited) and
+`label` (the final, reviewed label) are stored separately, plus
+`reviewed_change`: blank while review is pending, `yes` if the final label
+differs from the draft, `no` if the draft was accepted. Change rate =
+`yes` ÷ (`yes` + `no`). Editing only the rationale (`notes`) or the flag
+is not a label change. A pair counts as reviewed only after the reviewer
+fills in `reviewed_change`. Existing columns were kept (`label`,
+`confidence`, `flag`, `notes`, `labelled_at`); `flag=invalid` became
+`flag=non_job`, and thinness moved out of `flag` into `pairs.csv`.
+
+**Results (reported by the reviewer, original outcome preserved):**
+- **cal-03** (cv-03, career changer, against *Digital Marketing
+  Specialist*). Under the original guide the pair scored **2**, while the
+  persona design intended a lower score ("marketing listings are traps").
+  The guide had no rule on past work in the listing's field.
+- **cal-04** (cv-08, senior Angular, against *Senior Frontend Developer
+  (React)*). The guide gave no explicit 1-vs-2 rule when a required core
+  framework is missing; "React is not Angular" was stated only for the
+  reverse case.
+- **Listing quality.** All 10 calibration listings were truncated by the
+  provider (each exactly 500 characters, ending in "…"). Separately, 2 of
+  the 10 were not real job postings: **cal-05**, a self-employment
+  "personal development and leadership education" pitch, and **cal-06**, a
+  paid data-analyst career programme run by a recruiter. They are marked
+  `flag=non_job` in `calibration-labels.csv`.
+- The per-pair calibration labels were not saved to the repository:
+  `calibration-labels.csv` has the new columns but blank draft and final
+  labels. Only the outcomes above are recorded.
+
+**Guide changes:**
+- **Past work in the listing's field.** Experience performing the
+  advertised duties counts, if at least 1 year long and ended within the
+  last 3 years; older duty experience supports at most a 1; same industry
+  in a different role is domain familiarity only.
+- **Required core frameworks.** Explicit 1-vs-2 table: a 2 needs paid
+  work with the named framework, or with an alternative the listing
+  explicitly accepts; same role and seniority in a different framework of
+  the same kind is a 1; side projects and "familiar with" never count.
+  Preferred frameworks never cap the score.
+- **Listing quality.** `thin` is computed when pairs are built, before any
+  drafting or review (truncated, or under 1,000 characters). `non_job` is
+  judged during labelling and excluded from job-fit metrics.
+- The worked example "Flask/FastAPI against a Django listing" changed from
+  2 to 1, because the new framework rule now covers it.
+
+**Conclusion:**
+- **cal-03 under the revised rule is still 2.** The deciding evidence is 5
+  years as a Digital Marketing Specialist (paid campaigns, landing-page
+  tests, conversion tracking), ending March 2025, and a listing that
+  explicitly accepts a digital-marketing background. That is duty
+  experience, not same-industry experience. The persona's "marketing
+  listings are traps" premise holds only for marketing listings whose
+  duties she never performed; cv-03's twist was reworded accordingly. A
+  lower score would need a rule that discounts past duties because the
+  candidate has since changed field, which the guide's principle (judge
+  fit, not direction) currently rejects. Open for the reviewer to confirm.
+- **cal-04 under the revised rule is 1.**
+- **Risk: anchoring.** Reviewing a draft can pull the reviewer toward it.
+  Mitigations: read the pair before the draft, report the change rate, and
+  re-label 50 pairs a week later without drafts or first labels.
+
+**Next:** decide on replacing thin listings (proposal pending approval),
+then draft and review the main labels.
+
+## E004 — Calibration decisions (2026-11-20)
+
+Corrections and decisions after E003, from the reviewer.
+
+- **Calibration labels recorded** in `calibration-labels.csv`: draft
+  and final labels for all 10 pairs. The reviewer accepted every draft, so
+  the change rate is **0 / 10**. All 10 listings are thin (truncated). Note
+  that 0 / 10 measures agreement with the draft on 10 pairs only; the main
+  set's change rate is the meaningful figure.
+- **cal-03 stays 2.** No stricter career-changer rule.
+- **cal-05 and cal-06 confirmed** as the two non-job postings.
+- **Framework rule refined; this reverses part of E003.** A missing
+  required core framework now scores **2** when the candidate has paid
+  work in a framework from the same ecosystem (same language and framework
+  family, such as Flask or FastAPI for Django), and **1** when it comes
+  from a different ecosystem (Angular for React). The guide lists the
+  ecosystems explicitly, because "same language" alone would put Angular
+  and React together (both TypeScript). The Flask-against-Django worked
+  example is back to **2**. **cal-04 stays 1.**
+- **Thin-listing replacement approved**, starting with a pilot on the
+  first 50 listings in replacement order. The pilot reports its hit rate
+  and problems; the pool is not changed until the reviewer approves.

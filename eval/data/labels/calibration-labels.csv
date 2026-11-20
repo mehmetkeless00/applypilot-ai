@@ -1,0 +1,11 @@
+pair_id,cv_id,job_id,draft_label,label,reviewed_change,confidence,flag,notes,labelled_at
+cal-01,cv-01,adzuna:5945986185,3,3,no,low,,,2026-11-20
+cal-02,cv-02,adzuna:5930845818,1,1,no,high,,,2026-11-20
+cal-03,cv-03,adzuna:5961932663,2,2,no,low,,,2026-11-20
+cal-04,cv-08,adzuna:5966771365,1,1,no,low,,,2026-11-20
+cal-05,cv-11,adzuna:5938208205,0,0,no,,non_job,self-employment pitch,2026-11-20
+cal-06,cv-15,adzuna:5954321973,2,2,no,,non_job,paid training programme,2026-11-20
+cal-07,cv-18,adzuna:5955782400,3,3,no,low,,,2026-11-20
+cal-08,cv-27,adzuna:5963491816,0,0,no,high,,,2026-11-20
+cal-09,cv-28,adzuna:5829340865,1,1,no,high,,,2026-11-20
+cal-10,cv-30,adzuna:5948654739,2,2,no,low,,,2026-11-20
