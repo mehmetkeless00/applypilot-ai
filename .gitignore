@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 !.env.example
+
+# eval: provider listing text is not redistributed (see eval/README.md)
+/eval/data/jobs/snapshot*.jsonl
+/eval/work/
