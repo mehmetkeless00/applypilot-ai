@@ -54,6 +54,17 @@ function filtersFor(query: string, country: string): JobSearchFilters {
   };
 }
 
+// Adzuna adds tracking parameters to listing URLs, including our app ID
+// (utm_source). The committed index must not carry it, so tracking
+// parameters are dropped; the listing ID in the path is enough to open it.
+function publicUrl(url: string): string {
+  const u = new URL(url);
+  for (const key of [...u.searchParams.keys()]) {
+    if (key.startsWith("utm_")) u.searchParams.delete(key);
+  }
+  return u.toString();
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
@@ -94,7 +105,7 @@ async function main() {
   writeFileSync(
     join(JOBS_DIR, "index.csv"),
     "job_id,provider,url\n" +
-      [...all.values()].map((j) => `${j.id},${j.provider},${j.url}`).join("\n") +
+      [...all.values()].map((j) => `${j.id},${j.provider},${publicUrl(j.url)}`).join("\n") +
       "\n",
   );
   writeFileSync(join(JOBS_DIR, "pools.json"), JSON.stringify(pools, null, 2) + "\n");
