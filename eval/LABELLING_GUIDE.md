@@ -9,11 +9,11 @@ You are answering one question per pair:
 Read this guide before every session. Consistency matters more than
 being "right": a model can learn a consistent judge, not a moody one.
 
-Labels are **LLM-drafted, human-reviewed labels**: an LLM drafts a label,
-a rationale and a listing flag for each pair using this guide; the human
-reviewer then reviews every pair and either accepts the draft or assigns
-a different final label. Both the drafter and the reviewer apply the same
-rules below.
+The evaluation uses **LLM-generated labels (Claude Opus 5.5), no human review**: an LLM applies this guide to
+every pair and its label is the reference label. No human reviews the
+labels. (Until 2026-11-21 the plan was LLM-drafted labels reviewed by a
+human; see experiment log E009. The human calibration round that shaped
+this guide is recorded in E003 and E004.)
 
 ## The scale
 
@@ -256,28 +256,26 @@ required-core-framework rule (cal-04) and the listing-quality definitions.
 
 ## Process rules
 
-1. **Drafting.** An LLM drafts `draft_label`, `confidence`, `flag` and
-   `notes` (a one-line rationale citing the deciding evidence) for each pair from this guide, the CV text and the listing
-   text only. It never sees any system's score, the selection bucket or
-   the persona metadata. The drafting model must not be one of the systems
-   under evaluation. Record its model identifier and prompt version in the
-   experiment log for each drafting run. `draft_label` is never edited
-   after drafting.
-2. **Review.** Read the listing and the CV before reading the draft, then
-   compare. Accept the draft or assign a different final `label`, and fill
-   in `reviewed_change` and `labelled_at`. A pair counts as reviewed only
-   after the reviewer has done this; until then `label`,
-   `reviewed_change` and `labelled_at` stay blank. Never look at any
-   system's score before reviewing. The labelling order is shuffled.
-3. **One sitting = at most 60 pairs.** Fatigue makes labels drift.
-4. **About one minute per pair.** Skim the listing's requirements first,
-   then the CV.
-5. **Don't revise old labels** after seeing results. If you realise a rule
-   was wrong, write it in the experiment log and decide whether to
-   re-label everything under the new rule.
-6. **One week later**, re-label the 50 pairs listed in
-   `data/labels/relabel-sample.txt` without looking at your first labels
-   or the drafts.
+1. **Labelling.** An LLM writes `draft_label`, `confidence`, `flag` and
+   `notes` (a one-line rationale citing the deciding evidence) for each
+   pair from this guide, the CV text and the listing text only. It never
+   sees any system's score, the selection bucket or the persona metadata.
+   The labelling model must not be one of the systems under evaluation.
+   Record its model identifier and prompt version in the experiment log.
+2. **Reference label.** `label` is set equal to `draft_label`.
+   `reviewed_change` and `labelled_at` stay blank, because no human review
+   takes place.
+3. **Don't revise labels** after seeing results. If a rule turns out to be
+   wrong, record it in the experiment log and decide whether to re-label
+   everything under the new rule.
+
+### Future human audit (not active)
+
+The review tool (`npm run review`) is kept for a possible audit. If one is
+run: read the listing and the CV before the draft; accept the draft or
+assign a different `label`; fill in `reviewed_change` and `labelled_at`;
+review at most 60 pairs per sitting; never look at a system's score
+first.
 
 ## File format
 
@@ -285,24 +283,24 @@ required-core-framework rule (cal-04) and the listing-quality definitions.
 
 ```
 pair_id,cv_id,job_id,draft_label,label,reviewed_change,confidence,flag,notes,labelled_at
-p-example-1,cv-xx,adzuna:0000000001,2,2,no,high,,core stack matches; one tool missing,2026-11-24
-p-example-2,cv-xx,adzuna:0000000002,2,1,yes,low,,required core framework missing,2026-11-24
-p-example-3,cv-xx,adzuna:0000000003,0,0,no,high,non_job,self-employment pitch,2026-11-24
-p-example-4,cv-xx,adzuna:0000000004,2,,,,,SQL and BI match; seniority above,
+p-example-1,cv-xx,adzuna:0000000001,2,2,,high,,core stack matches; one tool missing,
+p-example-2,cv-xx,adzuna:0000000002,1,1,,low,,required core framework missing,
+p-example-3,cv-xx,adzuna:0000000003,0,0,,high,non_job,self-employment pitch,
 ```
 
 | Column | Written by | Meaning |
 |---|---|---|
 | `draft_label` | drafting LLM | 0 to 3. The original draft; never edited. |
-| `label` | reviewer | Final label, 0 to 3. Blank until reviewed. |
-| `reviewed_change` | reviewer | Blank until reviewed. `yes` if `label` differs from `draft_label`, `no` if the draft was accepted. |
-| `confidence` | drafted, then reviewed | `high` or `low`. |
-| `flag` | drafted, then reviewed | Empty, or `non_job`. Thinness is not recorded here; it is in `pairs.csv`. |
-| `notes` | drafted, then reviewed | Rationale: the deciding factor in a few words. The reviewer may edit it. |
-| `labelled_at` | reviewer | Date the final label was assigned. Blank until reviewed. |
+| `label` | copied from `draft_label` | Reference label, 0 to 3. A future human audit could change it. |
+| `reviewed_change` | future audit only | Blank: no pair is reviewed. In an audit, `yes` if `label` differs from `draft_label`, `no` if the draft was accepted. |
+| `confidence` | LLM | `high` or `low`. |
+| `flag` | LLM | Empty, or `non_job`. Thinness is not recorded here; it is in `pairs.csv`. |
+| `notes` | LLM | Rationale: the deciding factor in a few words. |
+| `labelled_at` | future audit only | Blank: no pair is reviewed. |
 
-The rows are illustrative, not real pairs. The last one is still pending review.
+The rows are illustrative, not real pairs. `label` equals `draft_label`; the review columns are blank.
 
-**Change rate** = number of `yes` ÷ number of reviewed pairs (`yes` +
-`no`). Pending pairs are not counted. Only a label difference is a change:
+**Change rate** (future audit only) = number of `yes` ÷ number of
+reviewed pairs (`yes` + `no`). It is not reported while no pair is
+reviewed. Only a label difference is a change:
 editing `notes` or `flag` while keeping the draft's label is `no`.

@@ -403,3 +403,36 @@ metadata, saves every decision immediately, resumes at the first pending
 pair, and stops after 60 reviews per session. Tested end to end (accept,
 change with note, undo, stale page, session limit, resume) against copies
 of the label files, which were restored byte-for-byte afterwards.
+
+## E009 — Method change: LLM-only reference labels (2026-11-21)
+
+**Decision (reviewer):** the evaluation switches to **LLM-generated labels (Claude Opus 5.5), no human review**.
+This supersedes the human-review workflow adopted in E003 and refined in
+E004 and E008. Nothing in those entries is changed; they record the
+history.
+
+**What changed:**
+- For all 550 evaluation pairs (450 production, 100 full-text), `label`
+  was set equal to `draft_label`. Verified before the update: 550 unique
+  pair IDs, 550 unique CV-listing combinations, every `draft_label` in
+  0-3, no review fields set. Verified after: every row has
+  `label == draft_label`, `reviewed_change` blank, all other columns
+  unchanged. `labelled_at` stays blank because no review happened.
+- The human-review step is removed from the active plan (README,
+  labelling guide). The review tool (`npm run review`) stays in the
+  repository for a possible future audit.
+- The drafting conventions listed in E008 were never confirmed by a
+  human; they are now part of the reference judge's behaviour.
+
+**What is kept:** the calibration round (E003, E004) was labelled by the
+reviewer and shaped the guide: the past-duties rule, the
+required-core-framework rule with ecosystems, and the listing-quality
+definitions. Its 10 pairs stay human-labelled and outside the evaluation.
+
+**Limitations (reported with every result):**
+- Metrics measure agreement with an LLM reference judge, not with human
+  recruiters.
+- The same model (Claude Opus 5.5) generated the 30 synthetic CVs and the
+  reference labels.
+- Agreement between the reference labels and human judgements was never
+  measured.
