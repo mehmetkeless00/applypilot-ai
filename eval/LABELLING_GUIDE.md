@@ -256,8 +256,8 @@ required-core-framework rule (cal-04) and the listing-quality definitions.
 
 ## Process rules
 
-1. **Drafting.** An LLM drafts `draft_label`, `notes` (the rationale) and
-   `flag` for each pair from this guide, the CV text and the listing
+1. **Drafting.** An LLM drafts `draft_label`, `confidence`, `flag` and
+   `notes` (a one-line rationale citing the deciding evidence) for each pair from this guide, the CV text and the listing
    text only. It never sees any system's score, the selection bucket or
    the persona metadata. The drafting model must not be one of the systems
    under evaluation. Record its model identifier and prompt version in the
@@ -296,7 +296,7 @@ p-example-4,cv-xx,adzuna:0000000004,2,,,,,SQL and BI match; seniority above,
 | `draft_label` | drafting LLM | 0 to 3. The original draft; never edited. |
 | `label` | reviewer | Final label, 0 to 3. Blank until reviewed. |
 | `reviewed_change` | reviewer | Blank until reviewed. `yes` if `label` differs from `draft_label`, `no` if the draft was accepted. |
-| `confidence` | reviewer | `high` or `low`. |
+| `confidence` | drafted, then reviewed | `high` or `low`. |
 | `flag` | drafted, then reviewed | Empty, or `non_job`. Thinness is not recorded here; it is in `pairs.csv`. |
 | `notes` | drafted, then reviewed | Rationale: the deciding factor in a few words. The reviewer may edit it. |
 | `labelled_at` | reviewer | Date the final label was assigned. Blank until reviewed. |

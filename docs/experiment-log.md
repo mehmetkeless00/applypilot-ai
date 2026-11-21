@@ -318,3 +318,38 @@ listings (E002), while Jobicy returned 100 per request with full
 descriptions and terms that allow this use.
 
 **Next:** reviewer decision on the shortfall, then label drafting.
+
+## E007 — Full-text subset accepted; drafting setup (2026-11-21)
+
+**Decision:** the full-text subset is accepted as built in E006: **10 CVs
+and 100 pairs**. No rule change.
+
+**Limitations of the full-text subset (reported with every result):**
+- **Smaller than planned.** It fell short of the approved 12 CVs and 120
+  pairs because the stricter own-role rule (every role word of
+  `search_query` in the title) left 6 of the 12 approved CVs with fewer
+  than 5 own-role candidates: cv-24 QA, cv-25 product manager, cv-26 UX
+  designer, and the Turkish cv-02, cv-16 and cv-28. Their queries were
+  written for Adzuna and are specific. Only 4 fallback CVs qualified, so
+  the subset has 10 CVs and **only one Turkish CV** (cv-21).
+- **Seniority words are ignored by the own-role rule.** cv-11 (intern)
+  therefore has mostly senior "Software Engineer" listings as own-role
+  pairs (4 of 5). Its own-role bucket is not an intern-level bucket.
+- **Words, not phrases.** The rule checks that each role word appears in
+  the title, not that they appear together. "Senior Site Reliability
+  Engineer (Data Platform)" counts as own-role for "data engineer".
+
+**Drafting setup:**
+- No non-Gemini LLM API key is configured in this environment, so the
+  drafts for all 550 pairs are written by **Claude Opus 5.5
+  (`claude-opus-5-5`)** inside a Claude Code session, not by a repeatable
+  API script. The prompt is `eval/LABELLING_GUIDE.md` as committed with
+  this entry. Gemini, a system under evaluation, is not used for drafting.
+- The drafter reads blind sheets: CV text and listing text only, no
+  bucket, language tags, screening columns or persona metadata.
+- **Limitation:** the same model wrote the 30 synthetic CVs and designed
+  the persona twists. Hiding metadata cannot remove that knowledge, so
+  drafts may share the CV author's assumptions. Human review of every
+  pair and the reported change rate are the safeguard.
+- Each draft has `draft_label`, `confidence`, `flag` and a one-line
+  rationale in `notes` citing the deciding evidence.
