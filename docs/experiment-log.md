@@ -436,3 +436,72 @@ definitions. Its 10 pairs stay human-labelled and outside the evaluation.
   reference labels.
 - Agreement between the reference labels and human judgements was never
   measured.
+
+## E010 — Baseline run: heuristic and Gemini (2026-11-21)
+
+**Reference:** LLM-generated labels (Claude Opus 5.5), no human review
+(E009). Every number below is agreement with that LLM reference judge, not
+with human recruiters; agreement with humans was never measured.
+
+**Setup (identical for both systems):**
+- Pairs: the frozen 450 production pairs (`pairs.csv`) and 100 full-text
+  pairs (`pairs-fulltext.csv`), with their snapshots and reference labels
+  as committed in 1ec749a.
+- Inclusion: pairs flagged non_job are excluded and counted (21
+  production, 1 full-text; 528 genuine). A pair whose prediction did not
+  return a score is excluded for that system and counted as a failure.
+  Production and full-text are reported separately, with thin/full and
+  same/cross-language subgroups.
+- Metrics (`eval/scripts/metrics.py`): precision/recall/F1 with match =
+  label ≥ 2 and predicted match = score ≥ 50 (fixed in advance, not tuned);
+  Spearman ρ; NDCG@5 and NDCG@10 per CV; 95% CV-level bootstrap, 1,000
+  resamples, seed 20261121.
+- Heuristic (`run-heuristic.ts`): the app's `scoreListing`, given the CV's
+  extracted skills and the persona's target-role search query, country and
+  seniority. Caveat: that query was also used to fetch the persona's own-role
+  listings, which may favour the heuristic; Gemini gets no query, and the
+  reference labeller saw no metadata.
+- Gemini (`run-gemini.ts`): the app's `analyze()` with gemini-2.5-flash,
+  output language en, using its `fit_score`. Responses cached locally
+  (gitignored).
+
+**Coverage:**
+
+| System | Set | Genuine | Scored | Failed / not run |
+|---|---|---|---|---|
+| Heuristic | Production | 429 | 429 | 0 |
+| Heuristic | Full-text | 99 | 99 | 0 |
+| Gemini | Production | 429 | 22 | 4 quota errors, 403 not run |
+| Gemini | Full-text | 99 | 0 | 99 not run |
+
+**Blocker:** the Gemini run hit the free-tier daily request quota
+(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`) after 23 successful
+calls, at 4 parallel requests. A sequential retry later the same day hit the
+same quota id immediately. The remaining 527 pairs need roughly 23 more days of
+free-tier quota at about 23 calls per day, or a paid tier. The runner resumes from
+the cache.
+
+**Results (production, all genuine):**
+
+| System | n | Precision | Recall | F1 | Spearman ρ | NDCG@5 | NDCG@10 |
+|---|---|---|---|---|---|---|---|
+| Heuristic | 429 | 0.68 [0.57, 0.78] | 0.87 [0.81, 0.93] | 0.76 [0.69, 0.83] | 0.65 [0.54, 0.75] | 0.80 [0.70, 0.88] | 0.87 [0.81, 0.92] |
+| Gemini (partial) | 22 | 0.71 [0.45, 0.92] | 1.00 | 0.83 [0.62, 0.96] | 0.86 [0.62, 0.96] | 1.00* | 1.00* |
+
+\* Trivial: the 22 pairs cover 16 CVs with at most two pairs each.
+
+Full-text, heuristic (n = 99): precision 0.60 [0.37, 0.82], recall 0.81
+[0.69, 0.93], F1 0.69 [0.49, 0.84], Spearman 0.65 [0.51, 0.75], NDCG@5
+0.72 [0.62, 0.82], NDCG@10 0.83 [0.75, 0.90].
+
+Head-to-head on the 22 production pairs both systems scored: F1 0.83 vs
+0.83, Spearman 0.71 vs 0.86 (heuristic vs Gemini). Too small to conclude
+anything.
+
+**Thin listings:** 418 of 429 genuine production pairs are thin, and the
+heuristic's thin-subgroup numbers (F1 0.77, Spearman 0.66) match the whole
+production set. The 11 full production listings contain no label ≥ 2 pair.
+
+**Conclusion so far:** the heuristic baseline is complete. No comparison
+with Gemini is drawn until its run covers the same pairs. Full tables:
+`eval/results/2026-11-21-baselines.md`.

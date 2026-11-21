@@ -83,10 +83,32 @@ LLM-generated labels (Claude Opus 5.5), no human review
 
 | System | Set | Pairs scored | Precision | Recall | F1 | Spearman ρ | NDCG@5 |
 |---|---|---|---|---|---|---|---|
-| Heuristic | Production | not run yet | | | | | |
-| Gemini | Production | not run yet | | | | | |
-| Heuristic | Full-text | not run yet | | | | | |
-| Gemini | Full-text | not run yet | | | | | |
+| Heuristic | Production | 429 / 429 genuine | 0.68 [0.57, 0.78] | 0.87 [0.81, 0.93] | 0.76 [0.69, 0.83] | 0.65 [0.54, 0.75] | 0.80 [0.70, 0.88] |
+| Gemini (partial) | Production | 22 / 429 genuine | 0.71 [0.45, 0.92] | 1.00 [1.00, 1.00] | 0.83 [0.62, 0.96] | 0.86 [0.62, 0.96] | 1.00 (uninformative) |
+| Heuristic | Full-text | 99 / 99 genuine | 0.60 [0.37, 0.82] | 0.81 [0.69, 0.93] | 0.69 [0.49, 0.84] | 0.65 [0.51, 0.75] | 0.72 [0.62, 0.82] |
+| Gemini | Full-text | 0 / 99 (blocked) | – | – | – | – | – |
+
+Run of 2026-11-21 (experiment log E010; full tables with subgroups in
+`results/2026-11-21-baselines.md`). Match means label ≥ 2 against score ≥ 50;
+brackets are 95% CV-level bootstrap intervals. 22 of the 550 pairs are
+flagged non_job and excluded (21 production, 1 full-text), leaving 528
+genuine pairs.
+
+**Gemini is incomplete and not comparable yet.** The run stopped at the
+Gemini free-tier daily request quota
+(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`) after 23 successful
+calls (22 genuine pairs plus 1 non-job); 4 pairs failed with that quota
+error and 523 were not run. The 22 scored pairs are a small sample from 16
+CVs with at most two pairs each, so NDCG@5 is trivially 1.00 and every
+interval is wide. On those same 22 pairs the heuristic scores F1 0.83 and
+Spearman 0.71, against Gemini's 0.83 and 0.86. The run resumes from the
+response cache once quota is available.
+
+**Thin listings.** In production 418 of 429 genuine pairs are thin, so the
+production heuristic numbers are essentially the thin-listing numbers
+(F1 0.77, Spearman 0.66); the 11 full production listings contain no
+label ≥ 2 pairs. The full-text set (all full listings) gives the heuristic
+F1 0.69 and Spearman 0.65.
 
 ## Labelling method
 

@@ -44,3 +44,5 @@ next-env.d.ts
 # eval: provider listing text is not redistributed (see eval/README.md)
 /eval/data/jobs/snapshot*.jsonl
 /eval/work/
+# eval: raw model responses quote listing text; only predictions are committed
+/eval/cache/**/*.json
