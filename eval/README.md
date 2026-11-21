@@ -11,10 +11,11 @@ on CV–job fit. Every model change in the ML plan is judged against this.
 | `data/jobs/` | `snapshot.jsonl` holds the frozen listing text and is **gitignored**. `index.csv` (job ID, provider, URL) and `pools.json` (each CV's own and neighbour candidates) are committed. Frozen so every run scores the same text. |
 | `data/pairs.csv` | The 450-pair **production set**: every CV–job pair to label, with its selection bucket, language tag and listing quality. Committed. |
 | `data/pairs-fulltext.csv` | The 100-pair **full-text subset** (see below), same columns plus `non_job_suspect`. Committed. |
-| `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. Each row keeps the LLM draft and the reviewed final label separately. Ground truth. Committed. |
+| `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. The reference label (`label`) equals the LLM label (`draft_label`); no human review (E009). Committed. |
 | `work/` | Rendered labelling sheets and raw draft files that contain or quote listing text. **Gitignored.** |
+| `data/gemini-sample.csv` | The fixed 100-pair sample Gemini is evaluated on (E011). |
 | `cache/` | Cached model responses keyed by a hash of model + input. Makes Gemini runs reproducible and free to re-run. |
-| `scripts/` | `collect-jobs.ts` builds the snapshot, `build-pairs.ts` picks the pairs (fixed seed), `render-sheet.ts` writes blind labelling sheets. Later: the system runner and the Python metrics script. |
+| `scripts/` | `collect-jobs.ts` builds the snapshot, `build-pairs.ts` picks the pairs (fixed seed), `render-sheet.ts` writes blind labelling sheets, `run-heuristic.ts` / `run-gemini.ts` produce predictions, `draw-sample.py` draws the Gemini sample, `gemini-daily.sh` schedules Gemini runs, `metrics.py` computes the report. |
 | `results/` | One dated JSON file and Markdown table per run. Never edited by hand. |
 | `LABELLING_GUIDE.md` | The 0–3 scale and rules. Read before every labelling session. |
 
@@ -81,28 +82,49 @@ person. Two limitations apply to every number in this table:
 
 LLM-generated labels (Claude Opus 5.5), no human review
 
-| System | Set | Pairs scored | Precision | Recall | F1 | Spearman ρ | NDCG@5 |
+| System | Pairs | Pairs scored | Precision | Recall | F1 | Spearman ρ | NDCG@5 |
 |---|---|---|---|---|---|---|---|
-| Heuristic | Production | 429 / 429 genuine | 0.68 [0.57, 0.78] | 0.87 [0.81, 0.93] | 0.76 [0.69, 0.83] | 0.65 [0.54, 0.75] | 0.80 [0.70, 0.88] |
-| Gemini (partial) | Production | 22 / 429 genuine | 0.71 [0.45, 0.92] | 1.00 [1.00, 1.00] | 0.83 [0.62, 0.96] | 0.86 [0.62, 0.96] | 1.00 (uninformative) |
-| Heuristic | Full-text | 99 / 99 genuine | 0.60 [0.37, 0.82] | 0.81 [0.69, 0.93] | 0.69 [0.49, 0.84] | 0.65 [0.51, 0.75] | 0.72 [0.62, 0.82] |
-| Gemini | Full-text | 0 / 99 (blocked) | – | – | – | – | – |
+| Heuristic | Production, all genuine | 429 / 429 | 0.68 [0.57, 0.78] | 0.87 [0.81, 0.93] | 0.76 [0.69, 0.83] | 0.65 [0.54, 0.75] | 0.80 [0.70, 0.88] |
+| Heuristic | Full-text, all genuine | 99 / 99 | 0.60 [0.38, 0.83] | 0.81 [0.68, 0.92] | 0.69 [0.49, 0.84] | 0.65 [0.51, 0.75] | 0.72 [0.63, 0.82] |
+| Heuristic | 100-pair sample | pending | | | | | |
+| Gemini | 100-pair sample | 7 / 100 so far | | | | | |
 
-Run of 2026-11-21 (experiment log E010; full tables with subgroups in
-`results/2026-11-21-baselines.md`). Match means label ≥ 2 against score ≥ 50;
-brackets are 95% CV-level bootstrap intervals. 22 of the 550 pairs are
-flagged non_job and excluded (21 production, 1 full-text), leaving 528
-genuine pairs.
+Match means label ≥ 2 against score ≥ 50; brackets are 95% CV-level
+bootstrap intervals. 22 of the 550 pairs are flagged non_job and excluded
+(21 production, 1 full-text), leaving 528 genuine pairs. Full tables,
+including thin/full, language and own/neighbour/random subgroups, are in
+`results/<date>-baselines.md` (experiment log E010, E011).
 
-**Gemini is incomplete and not comparable yet.** The run stopped at the
-Gemini free-tier daily request quota
-(`GenerateRequestsPerDayPerProjectPerModel-FreeTier`) after 23 successful
-calls (22 genuine pairs plus 1 non-job); 4 pairs failed with that quota
-error and 523 were not run. The 22 scored pairs are a small sample from 16
-CVs with at most two pairs each, so NDCG@5 is trivially 1.00 and every
-interval is wide. On those same 22 pairs the heuristic scores F1 0.83 and
-Spearman 0.71, against Gemini's 0.83 and 0.86. The run resumes from the
-response cache once quota is available.
+**Gemini is evaluated on a sample, not on all pairs.** The Gemini free
+tier allows about 20 requests a day and no paid tier is used, so Gemini
+scores a fixed 100-pair sample (`data/gemini-sample.csv`), and the
+comparison is heuristic vs Gemini on exactly those 100 pairs. The heuristic
+is also reported on all 528 genuine pairs. The sample rows above are
+filled in when the sample is complete (E011).
+
+How the sample was drawn (`scripts/draw-sample.py`): from the 528 genuine
+pairs, stratified by set and bucket (production/full-text ×
+own/neighbour/random) in proportion to stratum size, simple random
+sampling within each stratum, seed 20261121. The draw never reads Gemini
+predictions or the cache; cached responses are reused only for pairs that
+happened to fall in the sample (5 of 100).
+
+Sampling limitations:
+- **Wider intervals.** 100 pairs give much wider intervals than 528, and
+  small buckets are thin (random: 15 pairs, few or no label ≥ 2 pairs),
+  so per-bucket differences are indicative only.
+- **NDCG is weak.** The sample has about three pairs per CV, and a CV
+  with one pair always scores NDCG 1.00; compare systems on F1 and
+  Spearman.
+- **Not the full-set numbers.** The heuristic's sample numbers will
+  differ from its all-pairs numbers by sampling noise alone; only the
+  sample rows compare the two systems.
+- **Pooled sets.** The sample pools production (81 pairs, mostly thin
+  listings) and full-text (19 pairs); per-set results inside the sample
+  are small.
+- **Collection over several days.** Gemini responses are collected over
+  several days with the same model name; a silent model update by Google
+  during that period would not be visible.
 
 **Thin listings.** In production 418 of 429 genuine pairs are thin, so the
 production heuristic numbers are essentially the thin-listing numbers
@@ -205,6 +227,10 @@ and never changed after the first result is recorded.
 3. Render a sheet: `npx tsx eval/scripts/render-sheet.ts main 1 60`.
 4. Generate labels with the LLM following `LABELLING_GUIDE.md`; the
    reference label is the LLM label (no human review).
-5. Run the systems; predictions are written next to the cache.
-6. Run the metrics script; it writes `results/<date>.json` and a table.
+5. Run the systems: `npx tsx eval/scripts/run-heuristic.ts` (all pairs) and
+   `npx tsx eval/scripts/run-gemini.ts` (the 100-pair sample from
+   `python3 eval/scripts/draw-sample.py`). Gemini runs daily within the
+   free-tier quota via `eval/scripts/gemini-daily.sh` (launchd; see E011).
+6. Run `python3 eval/scripts/metrics.py`; it writes
+   `results/<date>-baselines.json` and `.md`.
 7. Record what happened in `docs/experiment-log.md`, including failures.

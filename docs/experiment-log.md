@@ -505,3 +505,63 @@ production set. The 11 full production listings contain no label ≥ 2 pair.
 **Conclusion so far:** the heuristic baseline is complete. No comparison
 with Gemini is drawn until its run covers the same pairs. Full tables:
 `eval/results/2026-11-21-baselines.md`.
+
+## E011 — Method change: Gemini on a 100-pair sample (2026-11-21)
+
+**Decision (reviewer):** no paid Gemini tier. Gemini is evaluated on a fixed
+100-pair sample instead of all 528 genuine pairs; the heuristic is still
+reported on all 528. The comparison between the systems is heuristic vs
+Gemini on the same 100 pairs. This supersedes the Gemini part of E010;
+E010's Gemini numbers (22 pairs, the first pairs by ID) are kept as history
+and not used.
+
+**Sample** (`eval/scripts/draw-sample.py` → `eval/data/gemini-sample.csv`):
+- Population: the 528 genuine pairs (non_job excluded), both sets.
+- Stratified by set × bucket, proportional allocation with largest-remainder
+  rounding, simple random sampling within strata, seed 20261121:
+
+  | Set | own | neighbour | random | Total |
+  |---|---|---|---|---|
+  | Production | 43 of 225 | 27 of 145 | 11 of 59 | 81 |
+  | Full-text | 9 of 50 | 6 of 30 | 4 of 19 | 19 |
+
+- Drawn independently of Gemini: the script reads only pairs and label
+  flags, never predictions or cached responses. Cached responses were
+  reused only for sample pairs that already had one (5 of 100: p-001,
+  p-003, p-010, p-014, p-051).
+
+**Collection:** `eval/scripts/gemini-daily.sh` runs `run-gemini.ts` on the
+sample once a day at 12:00 local time (after the midnight-Pacific quota
+reset) as a launchd agent, `com.applypilot.eval-gemini-sample`, with one
+request at a time. A 429 naming the daily quota stops the run at once;
+cached pairs are never re-requested. When all 100 pairs are ok or refused,
+the job regenerates the report with `metrics.py` and uninstalls itself.
+Nothing is committed automatically. First manual run: 7/100 complete (2
+new responses before the quota error). At about 20 requests a day the
+sample should complete in about 5 days.
+
+**Metrics changes:**
+- `metrics.py` now reports (1) the heuristic on all genuine pairs, per set,
+  with thin/full, language and own/neighbour/random subgroups, and (2)
+  heuristic vs Gemini on the sample pairs both systems scored, overall, per
+  bucket and per set. Interim reports are marked incomplete.
+- Each evaluation uses its own generator seeded with 20261121, so a group's
+  bootstrap interval no longer depends on which groups were computed before
+  it. Point estimates are unchanged. Some E010 intervals moved by up to
+  0.02 (for example full-text precision [0.37, 0.82] → [0.38, 0.83]).
+- The report file is named after the run date.
+
+**Limitations of the sample** (also in eval/README.md):
+- Intervals are much wider than on 528 pairs. The random bucket has 15
+  pairs with few or no label ≥ 2 pairs, so per-bucket results are only
+  indicative.
+- About three pairs per CV: NDCG is weak evidence (a CV with one pair
+  always scores 1.00). Compare on F1 and Spearman.
+- The heuristic's sample numbers differ from its all-pairs numbers by
+  sampling noise. Only the sample rows compare the systems.
+- Production (81, mostly thin) and full-text (19) are pooled in the
+  sample. Per-set results inside it are small.
+- Responses are collected over several days under one model name, so a
+  silent model update by Google in that period would not be visible.
+- All numbers remain agreement with the LLM reference judge, not with
+  humans.

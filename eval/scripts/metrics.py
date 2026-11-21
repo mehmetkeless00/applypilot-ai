@@ -7,6 +7,12 @@ reference labels (0-3). The reference labels are LLM-generated labels
 (Claude Opus 5.5), no human review, so every number here is agreement with
 an LLM reference judge, not with human recruiters.
 
+Two comparisons:
+  * Heuristic on all genuine pairs (production and full-text separately).
+  * Heuristic vs Gemini on the same 100-pair sample (data/gemini-sample.csv,
+    drawn by draw-sample.py; Gemini's free tier cannot score all pairs, see
+    E011), overall, per bucket (own/neighbour/random) and per set.
+
 Inclusion rules (the same for every system, see eval/README.md):
   * Pairs flagged non_job in the labels are excluded from job-fit metrics
     and only counted.
@@ -14,7 +20,7 @@ Inclusion rules (the same for every system, see eval/README.md):
     that system and counted as a failure.
   * Production and full-text sets are always reported separately. Within
     each set: all genuine pairs, thin vs full listings, same vs cross
-    language.
+    language, and own/neighbour/random bucket.
 
 Metrics:
   * Precision / recall / F1 for "is this a match?": the reference says
@@ -29,6 +35,7 @@ Metrics:
 """
 
 import csv
+import datetime
 import json
 import math
 import random
@@ -37,11 +44,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]  # eval/
 DATA = ROOT / "data"
 RESULTS = ROOT / "results"
-SYSTEMS = ["heuristic", "gemini"]
 THRESHOLD = 50
 BOOTSTRAP = 1000
 SEED = 20261121
-RUN_DATE = "2026-11-21"
+RUN_DATE = datetime.date.today().isoformat()  # report file name
 
 
 # ---------- loading ----------
@@ -67,6 +73,7 @@ def load_pairs():
                 "cv_id": p["cv_id"],
                 "quality": p["listing_quality"],
                 "language": p["language_pair"],
+                "bucket": p["bucket"],
                 "label": int(lab["label"]),
                 "non_job": lab["flag"] == "non_job",
             }
@@ -174,7 +181,10 @@ def bootstrap_ci(rows, metric, rng):
     return [stats[int(0.025 * len(stats))], stats[int(0.975 * len(stats)) - 1]]
 
 
-def evaluate(rows, rng):
+def evaluate(rows):
+    # A fresh generator per evaluation, so a group's interval does not
+    # depend on which other groups were evaluated before it.
+    rng = random.Random(SEED)
     out = {"n": len(rows), "cvs": len({r["cv_id"] for r in rows}),
            "positives": sum(1 for r in rows if r["label"] >= 2)}
     for name, fn in METRICS.items():
@@ -191,6 +201,18 @@ GROUPS = [
     ("full listings", lambda p: p["quality"] == "full"),
     ("same language", lambda p: p["language"] == "same"),
     ("cross language", lambda p: p["language"] == "cross"),
+    ("bucket own", lambda p: p["bucket"] == "own"),
+    ("bucket neighbour", lambda p: p["bucket"] == "neighbour"),
+    ("bucket random", lambda p: p["bucket"] == "random"),
+]
+
+SAMPLE_GROUPS = [
+    ("all sample", lambda p: True),
+    ("bucket own", lambda p: p["bucket"] == "own"),
+    ("bucket neighbour", lambda p: p["bucket"] == "neighbour"),
+    ("bucket random", lambda p: p["bucket"] == "random"),
+    ("production", lambda p: p["set"] == "production"),
+    ("fulltext", lambda p: p["set"] == "fulltext"),
 ]
 
 
@@ -202,51 +224,56 @@ def fmt(metric):
     return f"{v:.2f} [{ci[0]:.2f}, {ci[1]:.2f}]" if ci else f"{v:.2f}"
 
 
+def scored_rows(pairs_list, preds):
+    """Pairs with an ok prediction, with the score attached."""
+    return [{**p, "score": int(preds[(p["set"], p["pair_id"])]["score"])}
+            for p in pairs_list if preds.get((p["set"], p["pair_id"]), {}).get("status") == "ok"]
+
+
+def status_counts(pairs_list, preds):
+    status = {}
+    for p in pairs_list:
+        s = preds.get((p["set"], p["pair_id"]), {}).get("status", "missing")
+        status[s] = status.get(s, 0) + 1
+    return status
+
+
 def main():
     pairs = load_pairs()
-    rng = random.Random(SEED)
+    heur, gem = load_predictions("heuristic"), load_predictions("gemini")
     report = {"run_date": RUN_DATE, "reference": "LLM-generated labels (Claude Opus 5.5), no human review",
-              "threshold": THRESHOLD, "bootstrap": BOOTSTRAP, "seed": SEED, "systems": {}}
+              "threshold": THRESHOLD, "bootstrap": BOOTSTRAP, "seed": SEED}
 
-    for system in SYSTEMS:
-        preds = load_predictions(system)
-        counts = {}
-        groups = {}
-        for set_name in ["production", "fulltext"]:
-            in_set = [p for p in pairs.values() if p["set"] == set_name]
-            non_job = [p for p in in_set if p["non_job"]]
-            genuine = [p for p in in_set if not p["non_job"]]
-            status = {}
-            for p in genuine:
-                s = preds.get((set_name, p["pair_id"]), {}).get("status", "missing")
-                status[s] = status.get(s, 0) + 1
-            scored = [
-                {**p, "score": int(preds[(set_name, p["pair_id"])]["score"])}
-                for p in genuine if preds.get((set_name, p["pair_id"]), {}).get("status") == "ok"
-            ]
-            counts[set_name] = {"pairs": len(in_set), "non_job_excluded": len(non_job),
-                                "genuine": len(genuine), "scored": len(scored),
-                                "prediction_status": status}
-            groups[set_name] = {}
-            for name, keep in GROUPS:
-                rows = [r for r in scored if keep(r)]
-                if rows:
-                    groups[set_name][name] = evaluate(rows, rng)
-        report["systems"][system] = {"counts": counts, "groups": groups}
-
-    # Head-to-head on pairs both systems scored, so differences are not
-    # caused by one system having more failures.
-    h2h = {}
-    hp, gp = load_predictions("heuristic"), load_predictions("gemini")
+    # 1. Heuristic on all genuine pairs, per set.
+    counts, groups = {}, {}
     for set_name in ["production", "fulltext"]:
-        both = [p for p in pairs.values() if p["set"] == set_name and not p["non_job"]
-                and hp.get((set_name, p["pair_id"]), {}).get("status") == "ok"
-                and gp.get((set_name, p["pair_id"]), {}).get("status") == "ok"]
-        h2h[set_name] = {"n": len(both)}
-        for system, preds in [("heuristic", hp), ("gemini", gp)]:
-            rows = [{**p, "score": int(preds[(set_name, p["pair_id"])]["score"])} for p in both]
-            h2h[set_name][system] = evaluate(rows, rng) if rows else None
-    report["head_to_head"] = h2h
+        in_set = [p for p in pairs.values() if p["set"] == set_name]
+        genuine = [p for p in in_set if not p["non_job"]]
+        scored = scored_rows(genuine, heur)
+        counts[set_name] = {"pairs": len(in_set), "non_job_excluded": len(in_set) - len(genuine),
+                            "genuine": len(genuine), "scored": len(scored),
+                            "prediction_status": status_counts(genuine, heur)}
+        groups[set_name] = {name: evaluate(rows) for name, keep in GROUPS
+                            if (rows := [r for r in scored if keep(r)])}
+    report["heuristic_all"] = {"counts": counts, "groups": groups}
+
+    # 2. Heuristic vs Gemini on the sample, only on pairs both scored.
+    sample_keys = [(r["set"], r["pair_id"]) for r in read_csv(DATA / "gemini-sample.csv")]
+    sample = [pairs[k] for k in sample_keys]
+    assert all(not p["non_job"] for p in sample), "sample must contain genuine pairs only"
+    gem_status = status_counts(sample, gem)
+    both = [p for p in sample
+            if heur.get((p["set"], p["pair_id"]), {}).get("status") == "ok"
+            and gem.get((p["set"], p["pair_id"]), {}).get("status") == "ok"]
+    comparison = {}
+    for name, keep in SAMPLE_GROUPS:
+        subset = [p for p in both if keep(p)]
+        if subset:
+            comparison[name] = {"heuristic": evaluate(scored_rows(subset, heur)),
+                                "gemini": evaluate(scored_rows(subset, gem))}
+    report["sample"] = {"size": len(sample), "gemini_status": gem_status, "compared": len(both),
+                        "complete": gem_status.get("ok", 0) + gem_status.get("refused", 0) == len(sample),
+                        "groups": comparison}
 
     RESULTS.mkdir(exist_ok=True)
     (RESULTS / f"{RUN_DATE}-baselines.json").write_text(json.dumps(report, indent=2) + "\n")
@@ -256,30 +283,36 @@ def main():
              "Every number is agreement with that LLM reference judge, not with human recruiters.",
              f"Match = label >= 2 vs score >= {THRESHOLD}. 95% CIs: CV-level bootstrap, "
              f"{BOOTSTRAP} resamples, seed {SEED}.", ""]
-    lines += ["## Coverage", "",
-              "| System | Set | Pairs | Non-job excluded | Genuine | Scored | Prediction status (genuine pairs) |",
-              "|---|---|---|---|---|---|---|"]
-    for system in SYSTEMS:
-        for set_name, c in report["systems"][system]["counts"].items():
-            st = ", ".join(f"{k} {v}" for k, v in sorted(c["prediction_status"].items()))
-            lines.append(f"| {system} | {set_name} | {c['pairs']} | {c['non_job_excluded']} | "
-                         f"{c['genuine']} | {c['scored']} | {st} |")
+    lines += ["## Heuristic on all genuine pairs", "",
+              "| Set | Pairs | Non-job excluded | Genuine | Scored | Prediction status |",
+              "|---|---|---|---|---|---|"]
+    for set_name, c in counts.items():
+        st = ", ".join(f"{k} {v}" for k, v in sorted(c["prediction_status"].items()))
+        lines.append(f"| {set_name} | {c['pairs']} | {c['non_job_excluded']} | {c['genuine']} | "
+                     f"{c['scored']} | {st} |")
+    header = ["| Group | n | CVs | Label ≥2 | Precision | Recall | F1 | Spearman ρ | NDCG@5 | NDCG@10 |",
+              "|---|---|---|---|---|---|---|---|---|---|"]
     for set_name in ["production", "fulltext"]:
-        lines += ["", f"## {set_name}", "",
-                  "| System | Group | n | CVs | Label ≥2 | Precision | Recall | F1 | Spearman ρ | NDCG@5 | NDCG@10 |",
-                  "|---|---|---|---|---|---|---|---|---|---|---|"]
-        for system in SYSTEMS:
-            for name, g in report["systems"][system]["groups"][set_name].items():
-                lines.append(f"| {system} | {name} | {g['n']} | {g['cvs']} | {g['positives']} | "
-                             + " | ".join(fmt(g[m]) for m in METRICS) + " |")
-    lines += ["", "## Head-to-head (pairs both systems scored)", "",
-              "| Set | n | System | F1 | Spearman ρ | NDCG@5 |", "|---|---|---|---|---|---|"]
-    for set_name, h in h2h.items():
-        for system in SYSTEMS:
-            g = h[system]
-            if g:
-                lines.append(f"| {set_name} | {h['n']} | {system} | {fmt(g['f1'])} | "
-                             f"{fmt(g['spearman'])} | {fmt(g['ndcg@5'])} |")
+        lines += ["", f"### {set_name}", ""] + header
+        for name, g in groups[set_name].items():
+            lines.append(f"| {name} | {g['n']} | {g['cvs']} | {g['positives']} | "
+                         + " | ".join(fmt(g[m]) for m in METRICS) + " |")
+
+    smp = report["sample"]
+    st = ", ".join(f"{k} {v}" for k, v in sorted(gem_status.items()))
+    lines += ["", f"## Heuristic vs Gemini on the {smp['size']}-pair sample", "",
+              f"Gemini prediction status on the sample: {st}. Compared on the {smp['compared']} "
+              "pairs both systems scored."]
+    if not smp["complete"]:
+        lines += ["", f"**Sample incomplete ({smp['compared']}/{smp['size']}): interim numbers only.**"]
+    lines += ["", "| Group | n | CVs | Label ≥2 | System | Precision | Recall | F1 | Spearman ρ | NDCG@5 | NDCG@10 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+    for name, by_system in comparison.items():
+        for system, g in by_system.items():
+            lines.append(f"| {name} | {g['n']} | {g['cvs']} | {g['positives']} | {system} | "
+                         + " | ".join(fmt(g[m]) for m in METRICS) + " |")
+    lines += ["", "NDCG is computed per CV within the group. Most CVs have only a few sample pairs "
+              "(a CV with one pair always scores 1.00), so compare the systems on F1 and Spearman."]
     (RESULTS / f"{RUN_DATE}-baselines.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
 
