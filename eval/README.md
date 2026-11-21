@@ -9,7 +9,8 @@ on CV–job fit. Every model change in the ML plan is judged against this.
 |---|---|
 | `data/cvs/` | Synthetic CV personas, one Markdown file each. YAML front matter is metadata for us; the runner strips it before any system sees the CV. |
 | `data/jobs/` | `snapshot.jsonl` holds the frozen listing text and is **gitignored**. `index.csv` (job ID, provider, URL) and `pools.json` (each CV's own and neighbour candidates) are committed. Frozen so every run scores the same text. |
-| `data/pairs.csv` | Every CV–job pair to label, with its selection bucket and language tag. Committed. |
+| `data/pairs.csv` | The 450-pair **production set**: every CV–job pair to label, with its selection bucket, language tag and listing quality. Committed. |
+| `data/pairs-fulltext.csv` | The 100-pair **full-text subset** (see below), same columns plus `non_job_suspect`. Committed. |
 | `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. Each row keeps the LLM draft and the reviewed final label separately. Ground truth. Committed. |
 | `work/` | Rendered labelling sheets that contain listing text. **Gitignored.** |
 | `cache/` | Cached model responses keyed by a hash of model + input. Makes Gemini runs reproducible and free to re-run. |
@@ -31,6 +32,38 @@ Consequences for the results:
   evaluated** here. Its seniority and skill logic are.
 - Hard professional requirements (a licence, a degree, a required spoken
   language) are not logistics and still count. See the labelling guide.
+
+## Full-text subset
+
+Adzuna snippets are cut at 500 characters, so the production set is almost
+entirely thin. A separate **full-text subset** uses complete listings from
+Jobicy and Arbeitnow:
+
+- 10 CVs × (5 own-role + 3 neighbour-role + 2 random) = 100 pairs.
+- Own-role candidates must contain **every** role word of the CV's
+  `search_query` in the title (stricter than the production pools).
+- Built by `scripts/collect-fulltext.ts` (listing pool) and
+  `scripts/build-fulltext-pairs.ts` (pairs, seed 20261121).
+- Disjoint from the production set and always reported separately.
+- `non_job_suspect` is a **screening column only**: it marks listings that
+  look like programmes, courses, gig work or something the candidate pays
+  for. It never removes a listing; the final `non_job` decision is made in
+  label review.
+
+## Data sources and attribution
+
+- Job listings from **[Adzuna](https://www.adzuna.com)** and
+  **[Remotive](https://remotive.com)** (production set).
+- Remote job listings courtesy of **[Jobicy](https://jobicy.com)**, the
+  original source of every `jobicy:` listing (full-text subset).
+- Job listings via the **[Arbeitnow](https://www.arbeitnow.com) job board
+  API** ([arbeitnow.com](https://www.arbeitnow.com),
+  [arbeitnow.co.uk](https://www.arbeitnow.co.uk)), the source of every
+  `arbeitnow:` listing (full-text subset).
+
+Listing text from all sources stays out of git; only IDs and URLs are
+committed. Terms checked and rate limits used are in the experiment log
+(E006).
 
 ## Labelling method
 
@@ -66,7 +99,8 @@ Every result reports these counts first, then the metrics:
 | Non-job | `flag=non_job` in the labels | **No**, counted only |
 | Genuine, thin | not non-job, `listing_quality=thin` | Yes, also reported separately |
 | Genuine, full | not non-job, `listing_quality=full` | Yes, also reported separately |
-| Same / cross language | `language_pair` in `pairs.csv` | Yes, also reported separately |
+| Same / cross language | `language_pair` in the pairs file | Yes, also reported separately |
+| Production vs full-text | `pairs.csv` vs `pairs-fulltext.csv` | Yes, always reported as separate sets |
 | Pending review | `reviewed_change` blank | **No**, counted only |
 
 `listing_quality` is computed when pairs are built, before any label is

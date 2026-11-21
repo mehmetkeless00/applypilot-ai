@@ -8,8 +8,8 @@ export type SnapshotJob = JobListing & { language: string; fetchedAt: string };
 
 export const DATA_DIR = join(import.meta.dirname, "..", "..", "data");
 
-export function loadSnapshot(): Map<string, SnapshotJob> {
-  const lines = readFileSync(join(DATA_DIR, "jobs", "snapshot.jsonl"), "utf8")
+export function loadSnapshot(file = "snapshot.jsonl"): Map<string, SnapshotJob> {
+  const lines = readFileSync(join(DATA_DIR, "jobs", file), "utf8")
     .split("\n")
     .filter(Boolean);
   return new Map(

@@ -3,6 +3,7 @@
 //
 //   npx tsx eval/scripts/render-sheet.ts calibration
 //   npx tsx eval/scripts/render-sheet.ts main 1 60     (pairs p-001..p-060)
+//   npx tsx eval/scripts/render-sheet.ts fulltext 1 50 (pairs f-001..f-050)
 //
 // The sheet shows only what a recruiter would see: CV text (front matter
 // stripped) and the listing's title, company and description. It hides
@@ -34,7 +35,9 @@ function main() {
   const file =
     set === "calibration"
       ? join(DATA_DIR, "labels", "calibration-pairs.csv")
-      : join(DATA_DIR, "pairs.csv");
+      : set === "fulltext"
+        ? join(DATA_DIR, "pairs-fulltext.csv")
+        : join(DATA_DIR, "pairs.csv");
   let pairs = readPairs(file);
   if (set !== "calibration") {
     const start = Number(from ?? 1);
@@ -43,7 +46,7 @@ function main() {
   }
 
   const cvs = new Map(loadCvs().map((cv) => [cv.meta.id, cv.text]));
-  const snapshot = loadSnapshot();
+  const snapshot = loadSnapshot(set === "fulltext" ? "snapshot-fulltext.jsonl" : "snapshot.jsonl");
 
   const sections = pairs.map((p) => {
     const job = snapshot.get(p.job_id);
@@ -78,7 +81,7 @@ function main() {
   ].join("\n");
 
   mkdirSync(WORK_DIR, { recursive: true });
-  const name = set === "calibration" ? "calibration.md" : `main-${pairs[0]?.pair_id}-${pairs.at(-1)?.pair_id}.md`;
+  const name = set === "calibration" ? "calibration.md" : `${set}-${pairs[0]?.pair_id}-${pairs.at(-1)?.pair_id}.md`;
   writeFileSync(join(WORK_DIR, name), out + "\n");
   console.log(`Wrote eval/work/${name} (${pairs.length} pairs)`);
 }

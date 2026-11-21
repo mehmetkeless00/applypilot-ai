@@ -243,3 +243,78 @@ roughly 25 to 30 of 275 listings, from very few companies. The approach
 needs changing before a full run.
 
 **Next:** reviewer decision (see options in the pilot report).
+
+## E006 — Full-text subset from Jobicy and Arbeitnow (2026-11-21)
+
+**Question:** can a separate set of full-text listings be built within a
+one-day time box, so results are not only measured on 500-character
+snippets?
+
+**API terms checked on 2026-11-21:**
+- **Jobicy** (jobicy.com/jobs-rss-feed, "Fair use"): use in research tools
+  and AI products allowed without individual permission; storing and
+  processing allowed with no fixed retention; AI-derived outputs such as
+  matching scores explicitly allowed; must credit Jobicy as the source;
+  at most 1 request per second per IP, honour Retry-After on HTTP 429.
+- **Arbeitnow** (arbeitnow.com/en/terms, section 11 "API"): API provided
+  as is; users agree to link back to Arbeitnow.com; permission can be
+  revoked at any time. The API response adds: "free public API for jobs,
+  please do not abuse". Responses carry `x-ratelimit-limit: 50`, no
+  documented window. A UK feed exists at arbeitnow.co.uk.
+- **Rejected: Bundesagentur für Arbeit Jobsuche.** Its terms of use forbid
+  using programming interfaces "to read out content from the portal or
+  apps for the purpose of data collection and evaluation", and it has no
+  official API. No requests were made.
+- **Not used: Himalayas** (global remote jobs, 20 per request; little EU
+  coverage for our CVs).
+
+**Setup:** `collect-fulltext.ts`, 20 requests: Arbeitnow DE pages 1-3 and
+UK pages 1-2 (5 s apart); Jobicy geo germany, europe, uk (100 each) and
+12 role tags in Europe (50 each), 2 s apart. Attribution added to
+`eval/README.md`. Pairs from `build-fulltext-pairs.ts`, seed 20261121.
+
+**Result, pool:**
+- All 20 requests succeeded (Arbeitnow page 3, truncated during the API
+  check, worked this time). 1,867 listings collected, 700 duplicates
+  removed, 1 already in the production pool, **1,166 in the pool**
+  (Arbeitnow 899, Jobicy 267).
+- 1,163 full, 3 thin; median 4,753 characters.
+- Languages: English 788, German 241, Dutch 71, French 58, unknown 8.
+- `non_job_suspect`: **17**. The first screening pass flagged 35, mostly
+  false positives from benefits ("tuition reimbursement", "training
+  programme") and "Program Manager" titles; patterns were tightened and
+  the frozen pool re-screened without new requests. The 17 are graduate
+  programme intakes, freelance "Ads Quality Rater" gig work, an "Academy"
+  role and one engineering role whose text mentions self-employment.
+
+**Result, subset:**
+- **10 CVs and 100 pairs, not the approved 12 and 120.** Under the stricter
+  own-role rule, 6 of the 12 approved CVs had fewer than 5 own-role
+  candidates: cv-24 QA, cv-25 product manager, cv-26 UX designer, and all
+  three Turkish CVs (cv-02, cv-16, cv-28). Their queries were written for
+  Adzuna and are specific ("ux ui designer", "senior technical product
+  manager"). Of the fallbacks, only cv-21 (Turkish data engineer), cv-20,
+  cv-30 and cv-06 had enough; no other CV did.
+- Final CVs: cv-01, cv-09, cv-11, cv-17, cv-18, cv-21, cv-20, cv-30,
+  cv-27, cv-06.
+- Pairs: own 50, neighbour 30, random 20; 92 unique listings; Arbeitnow
+  66, Jobicy 34; all 100 full; `non_job_suspect` 1.
+- Language: same 71, cross 28, unknown 1. Cross pairs are 10 from the one
+  Turkish CV and 18 from English CVs against German, Dutch or French
+  listings.
+- **Quirks:** the stricter rule ignores seniority words, so cv-11
+  (intern) gets mostly senior "Software Engineer" listings as own-role
+  pairs (4 of 5). It matches words, not phrases, so "Senior Site
+  Reliability Engineer (Data Platform)" counts as own-role for "data
+  engineer".
+
+**Conclusion:** a usable full-text set exists, inside the time box, but
+it is smaller than planned and has only one Turkish CV. The Turkish
+cross-language result will rest on the production set.
+
+**Parked for later (not part of this task):** Jobicy could replace
+Remotive in the app's own remote search. Remotive's API returns only 15
+listings (E002), while Jobicy returned 100 per request with full
+descriptions and terms that allow this use.
+
+**Next:** reviewer decision on the shortfall, then label drafting.
