@@ -25,31 +25,12 @@ import { normalizeRemotiveJob } from "@/lib/jobs/remotive";
 import type { JobListing, JobSearchFilters } from "@/lib/jobs/types";
 import { loadCvs } from "./lib/cvs";
 import { detectLanguage } from "./lib/lang";
+import { titleMatches } from "./lib/titles";
 
 process.loadEnvFile(join(import.meta.dirname, "..", "..", ".env.local"));
 
 const JOBS_DIR = join(import.meta.dirname, "..", "data", "jobs");
 const ADZUNA_DELAY_MS = 1200;
-
-// Words that describe level or contract, not the role itself.
-const NON_ROLE_WORDS = new Set([
-  "junior", "senior", "lead", "intern", "internship", "mid", "remote", "jr", "sr",
-]);
-
-function roleWords(query: string): string[] {
-  return query
-    .toLowerCase()
-    .split(/[^a-z0-9.+#]+/)
-    .filter((w) => w.length > 1 && !NON_ROLE_WORDS.has(w));
-}
-
-function titleMatches(query: string, title: string): boolean {
-  const words = roleWords(query);
-  if (words.length === 0) return false;
-  const t = title.toLowerCase();
-  const hits = words.filter((w) => t.includes(w)).length;
-  return hits / words.length >= 0.5;
-}
 
 async function fetchRemotiveFeed(): Promise<JobListing[]> {
   const response = await fetch("https://remotive.com/api/remote-jobs", {

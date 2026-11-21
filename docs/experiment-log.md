@@ -198,3 +198,48 @@ Corrections and decisions after E003, from the reviewer.
 - **Thin-listing replacement approved**, starting with a pilot on the
   first 50 listings in replacement order. The pilot reports its hit rate
   and problems; the pool is not changed until the reviewer approves.
+
+## E005 — Thin-listing replacement pilot (2026-11-20)
+
+**Question:** can the approved plan replace thin Adzuna listings with
+comparable full-text postings from Greenhouse, Lever and Ashby?
+
+**Setup:** `eval/scripts/replace-thin.ts --limit 50`, seed 20261120. The
+target order written to `data/jobs/replacement-plan.csv` has 275 listings
+(289 affected pairs) with 90 retained thin pairs; the proposal's 274/290
+came from an earlier Python dry run with a different random generator.
+The pilot covered targets 1 to 50, all own-role listings whose snippet
+states no requirement. 74 company slugs × 3 platforms = 222 list requests,
+plus 14 imports through the app's adapter, throttled to one per second.
+Nothing in `pairs.csv` or the snapshot was changed.
+
+**Result:**
+- Raw outcome: 2 same-posting, 12 comparable, 36 none (28% hit rate).
+- **Boards found for only 2 of the 50 companies** (Stripe, Nebius, both
+  on Greenhouse). Most target companies are recruiters and staffing
+  agencies (Robert Half, SThree, emagine, Free-Work and others) or large
+  employers whose careers sites run on other systems.
+- **Step B (comparable) is not fit for purpose as written.** The pool's
+  role-word rule needs only half the query words, so a single shared word
+  passes: a *Data Analyst* target got *Backend Engineer, Data* and
+  *Product Marketing, Data Products*. On manual review only 3 of the 12
+  are genuinely comparable (#24 full-stack, #38 data-centre technician,
+  #42 data science).
+- **Same posting:** #14 is the same Stripe internship. #31 has the same
+  title at the same company, but in Germany instead of the Netherlands,
+  so it is not the same posting.
+- **Effective yield ≈ 5 / 50 (10%)**: 1 true same posting, 1 same-role
+  same-company posting in another country, 3 comparable.
+- **Concentration:** every replacement came from two companies, so a full
+  run would fill the dataset with Stripe and Nebius postings.
+- **Language shift:** 19 of the 50 targets were not in English; every
+  replacement is English, so the cross-language subgroup would shrink.
+- **Non-job removal:** target #40 is a paid placement programme (a
+  non-job, like cal-06). Replacing it hides a data-quality issue instead
+  of flagging it.
+
+**Conclusion:** at about 10% effective yield the plan would replace
+roughly 25 to 30 of 275 listings, from very few companies. The approach
+needs changing before a full run.
+
+**Next:** reviewer decision (see options in the pilot report).
