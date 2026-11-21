@@ -353,3 +353,53 @@ and 100 pairs**. No rule change.
   pair and the reported change rate are the safeguard.
 - Each draft has `draft_label`, `confidence`, `flag` and a one-line
   rationale in `notes` citing the deciding evidence.
+
+## E008 — Drafts for all 550 pairs; review tool (2026-11-21)
+
+**Setup:** drafts written by Claude Opus 5.5 (`claude-opus-5-5`) in a
+Claude Code session, following `eval/LABELLING_GUIDE.md` as of commit
+5d2942a (E007). Blind batches showed only the CV text and the listing text
+(production set: up to 700 characters, which covers every snippet;
+full-text set: up to 3,800 characters per listing). Drafts are in
+`data/labels/labels.csv` and `data/labels/labels-fulltext.csv`;
+`label`, `reviewed_change` and `labelled_at` are blank for every pair.
+
+**Result:**
+
+| Set | 0 | 1 | 2 | 3 | non_job | low confidence |
+|---|---|---|---|---|---|---|
+| Production (450) | 104 | 165 | 87 | 94 | 21 | 210 |
+| Full-text (100) | 47 | 27 | 13 | 13 | 1 | 27 |
+
+- Draft labels follow the selection buckets as expected: own-role pairs
+  lean 2-3, neighbour pairs 1, random pairs 0.
+- The one full-text listing flagged by the `non_job_suspect` screen
+  (f-080, a graduate intake with a past start date) was also drafted
+  `non_job`. Production-set non-jobs are mostly talent-marketplace
+  pitches, a self-funded placement programme, a training course, a closed
+  posting and a potential-opening (talent pool) ad.
+
+**Drafting conventions to confirm in review** (the guide does not state
+them explicitly):
+- A listing whose visible text states no requirements, with a matching
+  title and no contrary evidence, gets **3 with low confidence**, as the
+  reviewer did on cal-01 and cal-07.
+- **Seniority steps count in both directions**: a lead or senior CV
+  against a mid-level role two steps below gets 1, like a junior CV
+  against a senior role.
+- **Specialty families**: a different family with none of the role's core
+  skills is 0 (data scientist for a full-stack role); an adjacent family
+  is 1 (data engineer for a Python backend role).
+- **Hands-on duties older than 3 years** (an engineering manager who last
+  coded in 2022) count as adjacent only, per the past-duties rule.
+- **Required spoken languages** stated in the listing are hard blockers
+  (0), including Dutch, German, French and Arabic requirements.
+
+If review changes any of these, record it here and update the guide.
+
+**Review tool:** `npm run review` starts `eval/scripts/review-server.ts`
+on http://127.0.0.1:4610. It shows one pending pair at a time without
+metadata, saves every decision immediately, resumes at the first pending
+pair, and stops after 60 reviews per session. Tested end to end (accept,
+change with note, undo, stale page, session limit, resume) against copies
+of the label files, which were restored byte-for-byte afterwards.

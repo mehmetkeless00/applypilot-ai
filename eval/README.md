@@ -12,7 +12,7 @@ on CV–job fit. Every model change in the ML plan is judged against this.
 | `data/pairs.csv` | The 450-pair **production set**: every CV–job pair to label, with its selection bucket, language tag and listing quality. Committed. |
 | `data/pairs-fulltext.csv` | The 100-pair **full-text subset** (see below), same columns plus `non_job_suspect`. Committed. |
 | `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. Each row keeps the LLM draft and the reviewed final label separately. Ground truth. Committed. |
-| `work/` | Rendered labelling sheets that contain listing text. **Gitignored.** |
+| `work/` | Rendered labelling sheets and raw draft files that contain or quote listing text. **Gitignored.** |
 | `cache/` | Cached model responses keyed by a hash of model + input. Makes Gemini runs reproducible and free to re-run. |
 | `scripts/` | `collect-jobs.ts` builds the snapshot, `build-pairs.ts` picks the pairs (fixed seed), `render-sheet.ts` writes blind labelling sheets. Later: the system runner and the Python metrics script. |
 | `results/` | One dated JSON file and Markdown table per run. Never edited by hand. |
@@ -163,8 +163,9 @@ and never changed after the first result is recorded.
 1. Freeze the job snapshot: `npx tsx eval/scripts/collect-jobs.ts`.
 2. Build pairs: `npx tsx eval/scripts/build-pairs.ts`.
 3. Render a sheet: `npx tsx eval/scripts/render-sheet.ts main 1 60`.
-4. Draft labels with the LLM, then review every pair
-   (`LABELLING_GUIDE.md`, "Process rules").
+4. Draft labels with the LLM, then review every pair with
+   `npm run review` (http://127.0.0.1:4610; `LABELLING_GUIDE.md`,
+   "Process rules").
 5. Run the systems; predictions are written next to the cache.
 6. Run the metrics script; it writes `results/<date>.json` and a table.
 7. Record what happened in `docs/experiment-log.md`, including failures.

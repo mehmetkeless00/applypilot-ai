@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "review": "tsx eval/scripts/review-server.ts"
   },
   "dependencies": {
     "@google/genai": "^2.10.0",
