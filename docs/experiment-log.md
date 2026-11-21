@@ -565,3 +565,26 @@ sample should complete in about 5 days.
   silent model update by Google in that period would not be visible.
 - All numbers remain agreement with the LLM reference judge, not with
   humans.
+
+## E012 — Separate Gemini key for evaluation (2026-11-21)
+
+**Change:** eval scripts that call Gemini (run-gemini.ts, the daily launchd
+job, and the embedding scripts to come) now read `GEMINI_API_KEY_EVAL` from
+the gitignored `eval/.env.local`. The key belongs to a separate Google
+project created by the reviewer, so evaluation traffic and quota are kept
+apart from the app's project. `eval/scripts/lib/eval-env.ts` loads it,
+with no fallback: a missing or placeholder key, or one equal to the app's
+`GEMINI_API_KEY`, stops the run. A key Gemini rejects stops the whole run
+without touching the predictions file. Each run logs a short SHA-256
+fingerprint of the key, never the key itself.
+
+**Verified through the launchd job** (`launchctl kickstart`): no key →
+stops with "not set"; the app's key pasted in → refused as identical; a fake
+key → the log shows that fake key's fingerprint and Gemini returns HTTP 400,
+so the request carried the eval key, not the app key (which is valid).
+`gemini.csv` was unchanged in all three runs.
+
+**Effect on results:** none on method. The model, prompt and cache are
+unchanged (the cache key is model + input, not the API key), so the 7
+sample responses already collected under the app's project stay valid.
+The new project has its own free-tier daily quota.

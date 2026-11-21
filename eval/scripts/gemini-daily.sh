@@ -12,6 +12,8 @@
 # regenerates the report (metrics.py) and uninstalls itself. Nothing is
 # committed or pushed automatically.
 #
+# API key: GEMINI_API_KEY_EVAL from eval/.env.local only (separate Google
+# project; never the app's key). Each run logs the key's fingerprint.
 # Log: eval/work/gemini-daily.log (gitignored).
 
 set -u
@@ -56,8 +58,17 @@ EOF
     else
       echo "scheduled: no"
     fi
+    # Fingerprint of the key in eval/.env.local now; the last run's
+    # "Gemini key:" line below should show the same fingerprint.
+    key=$(sed -n 's/^GEMINI_API_KEY_EVAL=//p' "$REPO/eval/.env.local" 2>/dev/null | tr -d '"'"'"' \r')
+    if [ -n "$key" ]; then
+      echo "configured key: GEMINI_API_KEY_EVAL (fingerprint $(printf %s "$key" | shasum -a 256 | cut -c1-8))"
+    else
+      echo "configured key: GEMINI_API_KEY_EVAL not set in eval/.env.local"
+    fi
     if [ -f "$LOG" ]; then
       grep "^sample:" "$LOG" | tail -1
+      grep "^Gemini key:" "$LOG" | tail -1 | sed 's/^/last run: /'
       echo "--- last log lines ---"
       tail -8 "$LOG"
     else

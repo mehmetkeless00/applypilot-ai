@@ -13,6 +13,7 @@ on CV–job fit. Every model change in the ML plan is judged against this.
 | `data/pairs-fulltext.csv` | The 100-pair **full-text subset** (see below), same columns plus `non_job_suspect`. Committed. |
 | `data/labels/` | Labels (`labels.csv`), the calibration labels, and the one-week-later re-labels. The reference label (`label`) equals the LLM label (`draft_label`); no human review (E009). Committed. |
 | `work/` | Rendered labelling sheets and raw draft files that contain or quote listing text. **Gitignored.** |
+| `.env.local` | `GEMINI_API_KEY_EVAL`, the evaluation project's Gemini key. **Gitignored**; template in `.env.example`. |
 | `data/gemini-sample.csv` | The fixed 100-pair sample Gemini is evaluated on (E011). |
 | `cache/` | Cached model responses keyed by a hash of model + input. Makes Gemini runs reproducible and free to re-run. |
 | `scripts/` | `collect-jobs.ts` builds the snapshot, `build-pairs.ts` picks the pairs (fixed seed), `render-sheet.ts` writes blind labelling sheets, `run-heuristic.ts` / `run-gemini.ts` produce predictions, `draw-sample.py` draws the Gemini sample, `gemini-daily.sh` schedules Gemini runs, `metrics.py` computes the report. |
@@ -227,7 +228,10 @@ and never changed after the first result is recorded.
 3. Render a sheet: `npx tsx eval/scripts/render-sheet.ts main 1 60`.
 4. Generate labels with the LLM following `LABELLING_GUIDE.md`; the
    reference label is the LLM label (no human review).
-5. Run the systems: `npx tsx eval/scripts/run-heuristic.ts` (all pairs) and
+5. Put the evaluation Gemini key in `eval/.env.local` (copy
+   `eval/.env.example`) as `GEMINI_API_KEY_EVAL`. It belongs to a separate
+   Google project; eval scripts never use the app's `GEMINI_API_KEY`.
+   Run the systems: `npx tsx eval/scripts/run-heuristic.ts` (all pairs) and
    `npx tsx eval/scripts/run-gemini.ts` (the 100-pair sample from
    `python3 eval/scripts/draw-sample.py`). Gemini runs daily within the
    free-tier quota via `eval/scripts/gemini-daily.sh` (launchd; see E011).

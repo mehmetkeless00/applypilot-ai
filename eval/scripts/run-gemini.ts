@@ -11,6 +11,8 @@
 // job title, company, listing description and the CV text, output in
 // English, with the app's own prompt, schema and model settings.
 //
+// API key: GEMINI_API_KEY_EVAL from eval/.env.local only (lib/eval-env.ts).
+//
 // Every successful or refused response is cached in eval/cache/gemini/
 // (gitignored, because responses quote listing text), keyed by a hash of
 // model + input, so re-runs are free and reproducible. Errors are not
@@ -33,8 +35,7 @@ import { analyze, AnalysisRefusedError, MODEL } from "@/lib/ai/analyze";
 import type { PromptInput } from "@/lib/ai/prompt";
 import { parseCsv, stringifyCsv } from "./lib/csv";
 import { loadEvalPairs, type EvalPair } from "./lib/dataset";
-
-process.loadEnvFile(join(import.meta.dirname, "..", "..", ".env.local"));
+import { loadEvalGeminiKey } from "./lib/eval-env";
 
 const CACHE_DIR = join(import.meta.dirname, "..", "cache", "gemini");
 const MAX_429_RETRIES = 4;
@@ -89,6 +90,12 @@ async function scorePair(p: EvalPair): Promise<{ status: string; score: string; 
       writeFileSync(file, JSON.stringify(c));
       return { status: "ok", score: String(out.result.fit_score), detail: out.servedBy };
     } catch (error) {
+      // A rejected key fails every pair the same way: stop the whole run
+      // (exit 1, predictions file untouched) instead of recording errors.
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403
+        || (error.status === 400 && /API key/i.test(error.message)))) {
+        throw new Error(`Gemini rejected the eval key (HTTP ${error.status}); check GEMINI_API_KEY_EVAL in eval/.env.local`);
+      }
       if (error instanceof AnalysisRefusedError) {
         writeFileSync(file, JSON.stringify({ status: "refused", at: new Date().toISOString() }));
         return { status: "refused", score: "", detail: "safety block" };
@@ -126,6 +133,8 @@ async function scorePair(p: EvalPair): Promise<{ status: string; score: string; 
 }
 
 async function main() {
+  // Eval key only (eval/.env.local); the app's key is never used.
+  loadEvalGeminiKey();
   const limitArg = process.argv.indexOf("--limit");
   const concArg = process.argv.indexOf("--concurrency");
   const limit = limitArg > 0 ? Number(process.argv[limitArg + 1]) : Infinity;
